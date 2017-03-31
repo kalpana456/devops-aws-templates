@@ -1,6 +1,6 @@
-# Add Basic Authentication to an S3 Bucket
+# Add Basic Authentication to an S3 Bucket  
 
-## Description
+## Description  
 This Cloudformation template allows you to set up Basic Authentication over an S3 Bucket. By default S3 does not support Basic Authentication.
 
 ## Detail
