@@ -63,7 +63,7 @@ Run the aws cli create-stack command to trigger building your stack:
 ```
 aws cloudformation create-stack                     \
 --stack-name ${STACK_NAME}-$(date +%Y%m%d%H%M%S)    \
---template-body file://$(pwd | tr -d '\n')/ec2-asg-lc-sg-role-sns_debianjessie.yaml \
+--template-body file://$(pwd | tr -d '\n')/asg-lc-sns_debianjessie.yaml \
 --capabilities CAPABILITY_NAMED_IAM                 \
 --tags Key=Name,Value=${STACK_NAME}                 \
 Key=owner,Value=${OWNER_EMAIL}                      \
