@@ -1,0 +1,54 @@
+[
+    {
+        "ParameterValue": "x.x.x.x/32", 
+        "ParameterKey": "SSHLocation"
+    }, 
+    {
+        "ParameterValue": "name-env", 
+        "ParameterKey": "TagName"
+    }, 
+    {
+        "ParameterValue": "client", 
+        "ParameterKey": "TagClient"
+    }, 
+    {
+        "ParameterValue": "vpc-id", 
+        "ParameterKey": "VPCID"
+    }, 
+    {
+        "ParameterValue": "env", 
+        "ParameterKey": "TagEnvironment"
+    }, 
+    {
+        "ParameterValue": "name@host.com", 
+        "ParameterKey": "TagOwner"
+    }, 
+    {
+        "ParameterValue": "subnet-id", 
+        "ParameterKey": "SubnetPublic1"
+    }, 
+    {
+        "ParameterValue": "subnet-id", 
+        "ParameterKey": "SubnetPublic2"
+    }, 
+    {
+        "ParameterValue": "", 
+        "ParameterKey": "UserDataScript"
+    }, 
+    {
+        "ParameterValue": "key-pair", 
+        "ParameterKey": "KeyName"
+    }, 
+    {
+        "ParameterValue": "name@host.com", 
+        "ParameterKey": "OperatorEmail"
+    }, 
+    {
+        "ParameterValue": "project", 
+        "ParameterKey": "TagProject"
+    }, 
+    {
+        "ParameterValue": "t2.micro", 
+        "ParameterKey": "InstanceType"
+    }
+]
