@@ -1,0 +1,62 @@
+[
+    {
+        "ParameterValue": "true",
+        "ParameterKey": "Enabled"
+    },
+    {
+        "ParameterValue": "Cloudfront distribution",
+        "ParameterKey": "Comment"
+    },
+    {
+        "ParameterValue": "domain1.com,www.domain1.com",
+        "ParameterKey": "AliasCNAME"
+    },
+    {
+        "ParameterValue": "PriceClass_All",
+        "ParameterKey": "PriceClass"
+    },
+    {
+        "ParameterValue": "",
+        "ParameterKey": "AcmCertArn"
+    },
+    {
+        "ParameterValue": "origin.domain.com",
+        "ParameterKey": "OriginDomainName"
+    },
+    {
+        "ParameterValue": "https-only",
+        "ParameterKey": "OriginProtocolPolicy"
+    },
+    {
+        "ParameterValue": "0",
+        "ParameterKey": "DefaultTTL"
+    },
+    {
+        "ParameterValue": "86400",
+        "ParameterKey": "MinTTL"
+    },
+    {
+        "ParameterValue": "31536000",
+        "ParameterKey": "MaxTTL"
+    },
+    {
+        "ParameterValue": "false",
+        "ParameterKey": "SmoothStreaming"
+    },
+    {
+        "ParameterValue": "true",
+        "ParameterKey": "Compress"
+    },
+    {
+        "ParameterValue": "false",
+        "ParameterKey": "FwdQueryString"
+    },
+    {
+        "ParameterValue": "Authorization,CloudFront-Forwarded-Proto,CloudFront-Is-Desktop-Viewer,CloudFront-Is-Mobile-Viewer,CloudFront-Is-SmartTV-Viewer,CloudFront-Is-Tablet-Viewer,CloudFront-Viewer-Country,Host,Origin,Referer",
+        "ParameterKey": "FwdHeaders"
+    },
+    {
+        "ParameterValue": "redirect-to-https",
+        "ParameterKey": "ViewerProtocolPolicy"
+    }
+]

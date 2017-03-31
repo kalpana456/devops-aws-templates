@@ -1,0 +1,201 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+    This template sets up a Cloudfront Distribution.
+
+# You can find Cloudfront Distribution Config docs here:
+# http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-cloudfront-distributionconfig.html
+
+# and Cloudfront API values and descriptions here:
+# http://docs.aws.amazon.com/cloudfront/latest/APIReference/API_DistributionConfig.html
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Cloudfront Settings
+      Parameters:
+      - Enabled
+      - Comment
+      - AliasCNAME
+      - PriceClass
+      - AcmCertArn
+    - Label:
+        default: Origin Settings
+      Parameters:
+      - OriginDomainName
+      - OriginProtocolPolicy
+    - Label:
+        default: Default Cache Behaviour Settings
+      Parameters:
+      - DefaultTTL
+      - MinTTL
+      - MaxTTL
+      - SmoothStreaming
+      - Compress
+      - FwdQueryString
+      - FwdHeaders
+      - ViewerProtocolPolicy
+
+Parameters:
+  Enabled:
+    Default: true
+    Description: Enable the Cloudfront Distribution.
+    Type: String
+    AllowedValues:
+      - true
+      - false
+  Comment:
+    Description: Comment that describes the distribution.
+    Type: String
+  AliasCNAME:
+    Description: Comma delimited list of CNAME's of to Alias
+    Type: CommaDelimitedList
+  PriceClass:
+    Type: String
+    Default: PriceClass_100
+    AllowedValues:
+      - PriceClass_100
+      - PriceClass_200
+      - PriceClass_All
+    Description: The price class of the distribution.
+  AcmCertArn:
+    Description: The ARN of the ACM Certificate
+    Type: String
+  OriginDomainName:
+    Default: www.example.com
+    Description: The domain name that will be the origin server.
+    Type: String
+  OriginProtocolPolicy:
+    Type: String
+    Default: http-only
+    AllowedValues:
+      - http-only
+      - https-only
+      - match-viewer
+  DefaultTTL:
+    Default: 86400
+    Description: The Default TTL
+    Type: Number
+  MinTTL:
+    Default: 0
+    Description: The Min TTL
+    Type: Number
+  MaxTTL:
+    Default: 31536000
+    Description: The Max TTL
+    Type: Number
+  SmoothStreaming:
+    Default: false
+    Description: Enable the Cloudfront Distribution.
+    Type: String
+    AllowedValues:
+      - true
+      - false
+  Compress:
+    Default: false
+    Description: Enable the Cloudfront Distribution.
+    Type: String
+    AllowedValues:
+      - true
+      - false
+  FwdQueryString:
+    Default: false
+    Description: Forward query string parameters
+    Type: String
+    AllowedValues:
+      - true
+      - false
+  FwdHeaders:
+    Description: Comma delimited list of headers to forward
+    Type: CommaDelimitedList
+  ViewerProtocolPolicy:
+    Type: String
+    Default: allow-all
+    AllowedValues:
+      - allow-all
+      - https-only
+      - redirect-to-https
+    Description: The protocol that users can use to access the files in the origin that you specified in the TargetOriginId.
+
+Resources:
+  CloudfrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: !Ref Enabled
+        Comment: !Ref Comment
+        PriceClass: !Ref PriceClass
+        HttpVersion: http2
+        # WebACLId:
+        # DefaultRootObject: index.html
+        # Logging:
+        #   IncludeCookies: 'true'
+        #   Bucket: mylogs.s3.amazonaws.com
+        #   Prefix: myprefix
+        Aliases: !Ref AliasCNAME
+        ViewerCertificate:
+        # API Docs: http://docs.aws.amazon.com/cloudfront/latest/APIReference/API_ViewerCertificate.html
+          # CloudFrontDefaultCertificate: 'true'
+          AcmCertificateArn: !Ref AcmCertArn
+          SslSupportMethod: sni-only
+        Origins:
+        - DomainName: !Ref OriginDomainName
+          Id: !Sub ${OriginDomainName}-origin
+          # S3OriginConfig:
+          CustomOriginConfig:
+            HTTPPort: '80'
+            HTTPSPort: '443'
+            OriginProtocolPolicy: !Ref OriginProtocolPolicy
+            OriginSSLProtocols:
+            - TLSv1
+            - TLSv1.1
+            - TLSv1.2
+        DefaultCacheBehavior:
+          AllowedMethods:
+          - GET
+          - HEAD
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+          - PATCH
+          CachedMethods:
+          - GET
+          - HEAD
+          DefaultTTL: !Ref DefaultTTL
+          MinTTL: !Ref MinTTL
+          MaxTTL: !Ref MaxTTL
+          TargetOriginId: !Sub ${OriginDomainName}-origin
+          SmoothStreaming: !Ref SmoothStreaming
+          Compress: !Ref Compress
+          ForwardedValues:
+            QueryString: !Ref FwdQueryString
+            # Cookies:
+            #   Forward: none
+            #   WhitelistedNames:
+            # QueryStringCacheKeys:
+            Headers: !Ref FwdHeaders
+            # maximum of 10 whitelisted headers allowed
+              # - Authorization
+              # - CloudFront-Forwarded-Proto
+              # - CloudFront-Is-Desktop-Viewer
+              # - CloudFront-Is-Mobile-Viewer
+              # - CloudFront-Is-SmartTV-Viewer
+              # - CloudFront-Is-Tablet-Viewer
+              # - CloudFront-Viewer-Country
+              # - Host
+              # - Origin
+              # - Referer
+          ViewerProtocolPolicy: !Ref ViewerProtocolPolicy
+          # TrustedSigners:
+        # CustomErrorResponses:
+        # - ErrorCode: '404'
+        #   ResponsePagePath: "/error-pages/404.html"
+        #   ResponseCode: '200'
+        #   ErrorCachingMinTTL: '30'
+        # Restrictions:
+        #   GeoRestriction:
+        #     RestrictionType: whitelist
+        #     Locations:
+        #     - AQ
+        #     - CV
