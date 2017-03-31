@@ -1,0 +1,114 @@
+[
+    {
+      "ParameterKey": "InstanceType",
+      "ParameterValue": "t2.small"
+    },
+    {
+      "ParameterKey": "KeyName",
+      "ParameterValue": "key-pair"
+    },
+    {
+      "ParameterKey": "OperatorEmail",
+      "ParameterValue": "name@email.com"
+    },
+    {
+      "ParameterKey": "ContainerImage",
+      "ParameterValue": "account_id.dkr.ecr.us-east-1.amazonaws.com/name:version"
+    },
+    {
+      "ParameterKey": "BuildVersion",
+      "ParameterValue": "version"
+    },
+    {
+      "ParameterKey": "BuildDate",
+      "ParameterValue": "20170214004647"
+    },
+    {
+      "ParameterKey": "ContainerMaxCount",
+      "ParameterValue": "3"
+    },
+    {
+      "ParameterKey": "ContainerMinCount",
+      "ParameterValue": "1"
+    },
+    {
+      "ParameterKey": "ContainerDesiredCount",
+      "ParameterValue": "1"
+    },
+    {
+      "ParameterKey": "ContainerPortIn",
+      "ParameterValue": "8000"
+    },
+    {
+      "ParameterKey": "ContainerPortOut",
+      "ParameterValue": "8000"
+    },
+    {
+      "ParameterKey": "ContainerHealthCheckPath",
+      "ParameterValue": "/status"
+    },
+    {
+      "ParameterKey": "ContainerTargetPathPattern",
+      "ParameterValue": "/*"
+    },
+    {
+      "ParameterKey": "TaskMemory",
+      "ParameterValue": "512"
+    },
+    {
+      "ParameterKey": "ParentVPCStack",
+      "ParameterValue": "parent-stack-name"
+    },
+    {
+      "ParameterKey": "AllowIP",
+      "ParameterValue": "x.x.x.x/32"
+    },
+    {
+      "ParameterKey": "LoadBalancerListenPort",
+      "ParameterValue": "80"
+    },
+    {
+      "ParameterKey": "ClusterMaxSize",
+      "ParameterValue": "3"
+    },
+    {
+      "ParameterKey": "ClusterMinSize",
+      "ParameterValue": "1"
+    },
+    {
+      "ParameterKey": "ClusterDesiredSize",
+      "ParameterValue": "1"
+    },
+    {
+      "ParameterKey": "DeregistrationDelay",
+      "ParameterValue": "0"
+    },
+    {
+      "ParameterKey": "SSLCertificateId",
+      "ParameterValue": ""
+    },
+    {
+      "ParameterKey": "PrometheusSecurityGroupId",
+      "ParameterValue": ""
+    },
+    {
+      "ParameterKey": "TagName",
+      "ParameterValue": "name-env"
+    },
+    {
+      "ParameterKey": "TagOwner",
+      "ParameterValue": "name@email.com"
+    },
+    {
+      "ParameterKey": "TagClient",
+      "ParameterValue": "client-name"
+    },
+    {
+      "ParameterKey": "TagProject",
+      "ParameterValue": "project-name"
+    },
+    {
+      "ParameterKey": "TagEnvironment",
+      "ParameterValue": "env"
+    }
+]
