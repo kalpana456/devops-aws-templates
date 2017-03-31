@@ -1,6 +1,6 @@
-# Default Cloudfront Distribution 
+# Default Cloudfront Distribution  
 
-## Description
+## Description  
 This template will create and configure a Cloudfront Distribution. As a result all the details of the distribution can be stored and managed via change control. Take note, that if you run an update stack any manual tweaks you made to the cloudfront distribution will be lost - so the ideal scenario is to ensure all changes are made via this template.
 
 ## Parameters File
@@ -11,7 +11,7 @@ The default-params.json file is a sample parameters file with stub values. You s
 
 The following aws cli command will build the stack using the params listed in the parameters file. This command must be run from the location of the template and parameters file.  
 
-Set up these variables which will determine the stack name and tags:
+Set up these variables which will determine the stack name and tags:  
 ```
 export AWS_REGION=us-east-1     \
 AWS_PROFILE={profile_name}      \
@@ -22,7 +22,7 @@ PROJECT_NAME={project_name}     \
 CLIENT_NAME={client_name}    
 ```
 
-Run the aws cli create-stack command to trigger building your stack:
+Run the aws cli create-stack command to trigger building your stack:  
 ```
 aws cloudformation create-stack                     \
 --stack-name ${STACK_NAME}-$(date +%Y%m%d%H%M%S)    \
@@ -38,6 +38,6 @@ Key=client,Value=${CLIENT_NAME}                     \
 --profile ${AWS_PROFILE}
 ```
 
-The --region argument must be passed in if one is not set in your aws profile.
-The --profile argument can be left out if you are using the default profile.
-
+The --region argument must be passed in if one is not set in your aws profile.  
+The --profile argument can be left out if you are using the default profile.  
+  
