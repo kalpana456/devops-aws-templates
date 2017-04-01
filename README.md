@@ -15,19 +15,19 @@ These Clouformation templates are a good starting point for setting up and runni
 
 ### Default
 
-[default](https://github.com/RGADigital/devops-aws-templates/cloudformation/_default)
+[default](https://github.com/RGADigital/devops-aws-templates/tree/master/cloudformation/_default)
 
 ### Basic Authentication Over S3
 
-[basic-auth-over-s3](https://github.com/RGADigital/devops-aws-templates/cloudformation/basic-auth-over-s3)
+[basic-auth-over-s3](https://github.com/RGADigital/devops-aws-templates/tree/master/cloudformation/basic-auth-over-s3)
 
 ### Cloudfront
 
-[cloudfront](https://github.com/RGADigital/devops-aws-templates/cloudformation/cloudfront)
+[cloudfront](https://github.com/RGADigital/devops-aws-templates/tree/master/cloudformation/cloudfront)
 
 ### Container Service
 
-[container-service](https://github.com/RGADigital/devops-aws-templates/cloudformation/container-service)
+[container-service](https://github.com/RGADigital/devops-aws-templates/tree/master/cloudformation/container-service)
 
 # Authors
 
