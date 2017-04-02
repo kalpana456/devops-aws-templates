@@ -1,0 +1,144 @@
+stages:
+  - test-build
+  - push-image
+  - dev-deploy
+  # - stg-deploy
+  # - prd-deploy
+
+test-build:
+  stage: test-build
+  image: rgahub/docker-bash:latest # docker:latest image with bash installed 
+  variables:
+    DOCKER_DRIVER: overlay
+  services:
+  - docker:dind
+  script:
+    # these values need to be set as Gitlab Variables:
+    # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
+    # set variables
+    - export IMAGE_PORT=80 && echo $IMAGE_PORT #                                       <<< Set IMAGE_PORT
+    - export IMAGE_NAME=container_image && echo $IMAGE_NAME #                          <<< Set IMAGE_NAME
+    - export HEALTHCHECK_PATH=/status && echo $HEALTHCHECK_PATH #                      <<< Set HEALTHCHECK_PATH    
+    - export HEALTHCHECK_STATUS_MSG='"status":"ok"' #                                 <<< Set HEALTHCHECK_STATUS_MSG
+    - export BUILD_NUMBER=0.${CI_PIPELINE_ID}.${CI_BUILD_REF_NAME} && echo BUILD_NUMBER $BUILD_NUMBER
+    # export environment
+    - export BUILD_IMAGE_NAME=${IMAGE_NAME}-${BUILD_NUMBER}
+    # set up aws credentials
+    - mkdir -p ~/.aws/
+    - printf "[default]\naws_access_key_id=${AWS_ACCESS_KEY_ID}\naws_secret_access_key=${AWS_SECRET_ACCESS_KEY}" > ~/.aws/credentials;
+    - printf "[default]\nregion=$AWS_REGION" > ~/.aws/config;
+    # get access to aws ecr
+    - DOCKER_LOGIN=$(aws ecr get-login --region ${AWS_REGION})
+    - eval $DOCKER_LOGIN
+    # build image
+    - docker build -t ${BUILD_IMAGE_NAME} .
+    - CONTAINER_ID=$(docker run -d -ti --rm ${BUILD_IMAGE_NAME})
+    # wait for container to start
+    - sleep 5
+    # test healthcheck error code
+    - ERROR_CODE=$(docker exec $CONTAINER_ID bash -c 'curl -s --head localhost:'${IMAGE_PORT}${HEALTHCHECK_PATH} | grep '200 OK') && echo ERROR_CODE $ERROR_CODE
+    - if [ -z "$ERROR_CODE" ]; then echo "healthcheck CODE failed"; docker stop ${CONTAINER_ID} && docker rmi -f ${BUILD_IMAGE_NAME}; exit 1; else echo "healthcheck CODE passed"; fi
+    # test healthcheck error status message
+    - ERROR_STATUS=$(docker exec $CONTAINER_ID bash -c 'curl -s localhost:'${IMAGE_PORT}${HEALTHCHECK_PATH} | grep ${HEALTHCHECK_STATUS_MSG}) && echo ERROR_STATUS $ERROR_STATUS
+    - if [ -z "$ERROR_STATUS" ]; then echo "healthcheck STATUS failed"; docker stop ${CONTAINER_ID} && docker rmi -f ${BUILD_IMAGE_NAME}; exit 1; else echo "healthcheck STATUS passed"; fi
+    # clean up running container
+    - docker stop ${CONTAINER_ID}
+
+push-image:
+  stage: push-image
+  image: rgahub/docker-bash:latest
+  variables:
+    DOCKER_DRIVER: overlay
+  services:
+  - docker:dind
+  script:
+    # set variables
+    - export IMAGE_NAME=container_image && echo IMAGE_NAME $IMAGE_NAME #                          <<< Set IMAGE_NAME
+    - export ECS_REPO=account_id.dkr.ecr.${AWS_REGION}.amazonaws.com && echo ECS_REPO $ECS_REPO # <<< Set ECS_REPO
+    - export BUILD_NUMBER=0.${CI_PIPELINE_ID} && echo BUILD_NUMBER $BUILD_NUMBER
+    # export environment
+    - export BUILD_IMAGE_NAME=${IMAGE_NAME}-${BUILD_NUMBER}
+    # set up aws credentials
+    - mkdir -p ~/.aws/
+    - printf "[default]\naws_access_key_id=${AWS_ACCESS_KEY_ID}\naws_secret_access_key=${AWS_SECRET_ACCESS_KEY}" > ~/.aws/credentials;
+    - printf "[default]\nregion=$AWS_REGION" > ~/.aws/config;
+    # get access to aws ecr
+    - DOCKER_LOGIN=$(aws ecr get-login --region ${AWS_REGION})
+    - eval $DOCKER_LOGIN
+    # build, tag and push image
+    - docker build -t ${BUILD_IMAGE_NAME} .
+    - docker tag ${BUILD_IMAGE_NAME} ${ECS_REPO}/${IMAGE_NAME}:${BUILD_NUMBER}
+    - docker push ${ECS_REPO}/${IMAGE_NAME}:${BUILD_NUMBER}
+    # clean up images
+    - docker rmi -f ${BUILD_IMAGE_NAME}
+    - docker rmi -f ${ECS_REPO}/${IMAGE_NAME}:${BUILD_NUMBER}
+  only:
+    - master
+
+dev-deploy:
+  stage: dev-deploy
+  image: rgahub/docker-bash:latest
+  script:
+    # set variables
+    - export ENV=dev
+    # export environment variables
+    - export BUILD_NUMBER=0.${CI_PIPELINE_ID} && echo BUILD_NUMBER $BUILD_NUMBER
+    # set up aws credentials
+    - mkdir -p ~/.aws/
+    - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY" > ~/.aws/credentials;
+    - printf "[default]\nregion=$AWS_REGION" > ~/.aws/config;
+    # set script permissions
+    - chmod +x deploy.sh ops/scripts/aws-stack-check.sh
+    # kick off update stack
+    - ./deploy.sh -d -s -e ${ENV} -t ${BUILD_NUMBER} -r ${AWS_REGION}
+  only:
+    - master
+  environment:
+    name: DEV Application Server
+    url: http://site-dev.crocs.rgaapp.com/
+
+# stg-deploy:
+#   stage: stg-deploy
+#   image: rgahub/docker-bash:latest
+#   script:
+#     # set variables
+#     - export ENV=stg
+#     # export environment variables
+#     - export BUILD_NUMBER=0.${CI_PIPELINE_ID} && echo BUILD_NUMBER $BUILD_NUMBER
+#     # set up aws credentials
+#     - mkdir -p ~/.aws/
+#     - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY" > ~/.aws/credentials;
+#     - printf "[default]\nregion=$AWS_REGION" > ~/.aws/config;
+#     # set script permissions
+#     - chmod +x deploy.sh ops/scripts/aws-stack-check.sh
+#     # kick off update stack
+#     - ./deploy.sh -d -s -e ${ENV} -t ${BUILD_NUMBER} -r ${AWS_REGION}
+#   only:
+#     - master
+#   environment:
+#     name: STG Application Server
+#     url: http://site-stg.crocs.rgaapp.com/
+#   when: manual
+
+# prd-deploy:
+#   stage: prd-deploy
+#   image: docker:latest  
+#   script:
+#     # set variables
+#     - export ENV=prd
+#     # export environment variables
+#     - export BUILD_NUMBER=0.${CI_PIPELINE_ID} && echo BUILD_NUMBER $BUILD_NUMBER
+#     # set up aws credentials
+#     - mkdir -p ~/.aws/
+#     - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY" > ~/.aws/credentials;
+#     - printf "[default]\nregion=$AWS_REGION" > ~/.aws/config;
+#     # set script permissions
+#     - chmod +x deploy.sh ops/scripts/aws-stack-check.sh
+#     # kick off update stack
+#     - ./deploy.sh -d -s -e ${ENV} -t ${BUILD_NUMBER} -r ${AWS_REGION}
+#   only:
+#     - master
+#   environment:
+#     name: PRD Application Server
+#     url: http://site-prd.crocs.rgaapp.com/
+#   when: manual

@@ -1,0 +1,85 @@
+stages:
+  - sync-web
+  - build-image
+  - update-stack
+  - prod-deploy
+
+sync-web:
+  stage: sync-web
+  artifacts:
+    paths:
+    - proj-web
+  image: ruby:2.3
+  script:
+    - eval $(ssh-agent -s)
+    - ssh-add <(echo "$SSH_PRIVATE_KEY")
+    - mkdir -p ~/.ssh
+    - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
+    - git clone git@gitlab.ny.rga.com:enbd/proj-web.git
+    - export JEKYLL_ENV=production
+    - cd proj-web/ && bundle install && bundle exec jekyll build && cd ../
+  only:
+    - master
+
+build-image:
+  stage: build-image
+  image: docker:latest
+  variables:
+    DOCKER_DRIVER: overlay
+  services:
+  - docker:dind
+  script:
+    - cp -R proj-web/dist/* src/server/public/
+    - apk update && apk add py2-pip
+    - pip install awscli --ignore-installed six
+    - mkdir -p ~/.aws/
+    - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY" > ~/.aws/credentials;
+    - printf "[default]\nregion=$AWS_ECR_REGION" > ~/.aws/config;
+    - DOCKER_LOGIN=$(aws ecr get-login --region ${AWS_ECR_REGION})
+    - eval $DOCKER_LOGIN
+    - docker build -t enbd/proj-app:0.${CI_PIPELINE_ID} .
+    - docker tag enbd/proj-app:0.${CI_PIPELINE_ID} 051934287779.dkr.ecr.${AWS_ECR_REGION}.amazonaws.com/enbd/proj-app:0.${CI_PIPELINE_ID}
+    - docker push 051934287779.dkr.ecr.${AWS_ECR_REGION}.amazonaws.com/enbd/proj-app:0.${CI_PIPELINE_ID}
+  only:
+    - master
+
+update-stack:
+  stage: update-stack
+  image: docker:latest
+  variables:
+    DOCKER_DRIVER: overlay
+  services:
+  - docker:dind
+  script:
+    - apk update && apk add bash py2-pip
+    - pip install awscli --ignore-installed six
+    - mkdir -p ~/.aws/
+    - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY" > ~/.aws/credentials;
+    - printf "[default]\nregion=$AWS_ECR_REGION" > ~/.aws/config;
+    - ./build.sh -d -s -e dev -t 0.${CI_PIPELINE_ID} -r ${AWS_ECR_REGION}
+  only:
+    - master
+  environment:
+    name: DEV Application Server
+    url: http://proj-dev.enbd.rgadev.com/
+
+prod-deploy:
+  stage: prod-deploy
+  image: docker:latest
+  variables:
+    DOCKER_DRIVER: overlay
+  services:
+  - docker:dind
+  script:
+    - apk update && apk add bash py2-pip
+    - pip install awscli --ignore-installed six
+    - mkdir -p ~/.aws/
+    - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY" > ~/.aws/credentials;
+    - printf "[default]\nregion=$AWS_ECR_REGION" > ~/.aws/config;
+    - ./build.sh -d -s -e prd -t 0.${CI_PIPELINE_ID} -r ${AWS_ECR_REGION}
+  only:
+    - master
+  environment:
+    name: PRD Application Server
+    url: http://proj-prd.enbd.rgadev.com/
+  when: manual

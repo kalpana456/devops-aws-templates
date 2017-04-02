@@ -1,0 +1,53 @@
+stages:
+  - dev-deploy
+  - stg-deploy
+dev-deploy:
+  stage: dev-deploy
+  artifacts:
+    paths:
+    - artifact
+  image: node:boron
+  script:
+    # build and deploy to DEV from MASTER...
+    - export AWS_REGION=us-east-1
+    - apt-get update && apt-get install -y python3.4 python3-dev
+    - cd ~/
+    - curl -O https://bootstrap.pypa.io/get-pip.py && python3.4 get-pip.py --user
+    - export PATH=$PATH:~/.local/bin
+    - pip3.4 install awscli --upgrade --user --ignore-installed six
+    - mkdir -p ~/.aws/
+    - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY" > ~/.aws/credentials;
+    - printf "[default]\nregion=$AWS_REGION" > ~/.aws/config;
+    - cd -
+    - npm install -g gulp
+    - npm install -g bower
+    - npm install
+    - bower install --config.interactive=false --allow-root
+    - gulp build --env dev
+    - cd dist
+    - aws s3 sync --delete . s3://crocs-caya/static/dev
+    - cd ..
+    - mkdir artifact
+    - cp -R dist/* artifact/
+  only:
+    - master
+stg-deploy:
+  stage: stg-deploy
+  image: node:boron
+  script:
+    # build and deploy to STG from MASTER...
+    - export AWS_REGION=us-east-
+
+    - apt-get update && apt-get install -y python3.4 python3-dev
+    - cd ~/
+    - curl -O https://bootstrap.pypa.io/get-pip.py && python3.4 get-pip.py --user
+    - export PATH=$PATH:~/.local/bin
+    - pip3.4 install awscli --upgrade --user --ignore-installed six
+    - mkdir -p ~/.aws/
+    - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY" > ~/.aws/credentials;
+    - printf "[default]\nregion=$AWS_REGION" > ~/.aws/config;    
+    - cd artifact
+    - aws s3 sync --delete . s3://crocs-caya/static/stg
+  only:
+    - master
+  when: manual
