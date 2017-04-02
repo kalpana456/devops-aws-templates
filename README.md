@@ -1,3 +1,5 @@
+![R/GA](./rga_logo.png?raw=true "R/GA")
+
 # DevOps AWS Templates
 
 This repository contains a list of templates, scripts, and sample code for building and managing infrastructure on Amazon Web Services.  
@@ -11,7 +13,7 @@ This repository contains a list of templates, scripts, and sample code for build
 
 ## Cloudformation  
 
-These Clouformation templates are a good starting point for setting up and running applications on AWS.  
+These Clouformation templates are a good starting point for setting up and running web applications on AWS.  
 
 ### Default
 
