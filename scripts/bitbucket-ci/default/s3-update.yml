@@ -1,0 +1,38 @@
+image: node:boron
+
+pipelines:
+  branches:
+    master:
+      - step:
+          script:
+            - echo build and deploy to DEV from MASTER...
+            - apt-get update && apt-get install -y python3.4 python3-dev
+            - cd ~/
+            - curl -O https://bootstrap.pypa.io/get-pip.py && python3.4 get-pip.py --user
+            - export PATH=$PATH:~/.local/bin
+            - pip3.4 install awscli --upgrade --user --ignore-installed six
+            - mkdir -p ~/.aws/
+            - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY" > ~/.aws/credentials;
+            - printf "[default]\nregion=$AWS_REGION" > ~/.aws/config;
+            - cd -
+            - npm install
+            - npm run deploy
+            - cd public
+            - aws s3 sync --delete . s3://vd-cyc/dev/static
+    release:
+      - step:
+          script:
+            - echo build and deploy to PRD from RELEASE...
+            - apt-get update && apt-get install -y python3.4 python3-dev
+            - cd ~/
+            - curl -O https://bootstrap.pypa.io/get-pip.py && python3.4 get-pip.py --user
+            - export PATH=$PATH:~/.local/bin
+            - pip3.4 install awscli --upgrade --user --ignore-installed six
+            - mkdir -p ~/.aws/
+            - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY" > ~/.aws/credentials;
+            - printf "[default]\nregion=$AWS_REGION" > ~/.aws/config;
+            - cd -
+            - npm install
+            - npm run deploy
+            - cd public
+            - aws s3 sync --delete . s3://vd-cyc/prd/static

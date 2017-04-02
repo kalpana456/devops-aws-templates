@@ -1,0 +1,60 @@
+image:
+  name: rgahub/docker-bash:latest # docker:latest image with bash installed 
+pipelines:
+  branches:
+    dev:
+      - step:
+          script: # Modify the commands below to build your repository.
+            # these values need to be set as BitBucket Variables:
+            # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DOCKER_SG_ID, AWS_REGION  <<< Add in BitBucket
+            # set up build
+            - ENV=dev
+            - BUILD_NUMBER=0.$(date +%Y%m%d%H%M%S).${ENV} && echo $BUILD_NUMBER
+            - EXTERNAL_IP=$(curl -s ipinfo.io/ip) && echo $EXTERNAL_IP
+            # set up export values
+            - export DOCKER_SERVER=docker.server.com #                     <<< Set DOCKER_SERVER
+            - export IMAGE_NAME=image-name #                               <<< Set IMAGE_NAME
+            - export ECS_REPO=account-id.dkr.ecr.us-east-1.amazonaws.com # <<< Set ECS_REPO
+            - export IMAGE_PORT=80 #                                       <<< Set IMAGE_PORT
+            - export HEALTHCHECK_PATH="/" #                                <<< Set HEALTHCHECK_PATH
+            # set up docker env variables
+            - export DOCKER_HOST=tcp://${DOCKER_SERVER}:2376
+            - export DOCKER_TLS_VERIFY=1
+            # set up aws credentials
+            - mkdir -p ~/.aws/
+            - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY" > ~/.aws/credentials;
+            - printf "[default]\nregion=$AWS_REGION" > ~/.aws/config;
+            - mkdir -p ~/.docker/ && cp ops/docker/keys/* ~/.docker/
+            # allow access to docker server sg
+            - SG_LOOKUP=$(aws ec2 describe-security-groups --group-ids $AWS_DOCKER_SG_ID --filter Name=ip-permission.cidr,Values=$EXTERNAL_IP/32 --output text --query "SecurityGroups[].GroupId" --region ${AWS_REGION}) && echo $SG_LOOKUP
+            - if [ -z $SG_LOOKUP ]; then echo updated sg access...; aws ec2 authorize-security-group-ingress --group-id $AWS_DOCKER_SG_ID --cidr $EXTERNAL_IP/32 --protocol tcp --port 2376; else echo already authorized; fi
+            # confirm docker status
+            - docker version
+            # log into aws ecr
+            - eval $(aws ecr get-login --region ${AWS_REGION})
+            # build and tag docker image
+            - docker build -t ${IMAGE_NAME} .
+            # test image
+            - CONTAINER_ID=$(docker run -d -ti --rm ${IMAGE_NAME}) && echo CONTAINER_ID $CONTAINER_ID
+            - sleep 5
+            # test healthcheck error code
+            - ERROR_CODE=$(docker exec $CONTAINER_ID bash -c "curl -s --head localhost:${IMAGE_PORT}${HEALTHCHECK_PATH}" | grep '200 OK') && echo ERROR_CODE $ERROR_CODE
+            - if [ -z "$ERROR_CODE" ]; then echo "healthcheck CODE failed"; docker stop ${CONTAINER_ID} && docker rmi -f ${IMAGE_NAME}; exit 1; else echo "healthcheck CODE passed"; fi
+            # test healthcheck error status message
+            # - ERROR_STATUS=$(docker exec $CONTAINER_ID bash -c "curl -s localhost:${IMAGE_PORT}${HEALTHCHECK_PATH}" | grep -i '"status":"ok"') && echo ERROR_STATUS $ERROR_STATUS
+            # - if [ -z "$ERROR_STATUS" ]; then echo "healthcheck STATUS failed"; docker stop ${CONTAINER_ID} && docker rmi -f ${IMAGE_NAME}; exit 1; else echo "healthcheck STATUS passed"; fi
+            # clean up running container
+            - docker stop ${CONTAINER_ID}
+            # tag docker container
+            - docker tag ${IMAGE_NAME} ${ECS_REPO}/${IMAGE_NAME}:${BUILD_NUMBER}
+            # push docker image
+            - docker push ${ECS_REPO}/${IMAGE_NAME}:${BUILD_NUMBER}
+            # clean up
+            - docker rmi -f ${IMAGE_NAME}
+            - docker rmi -f ${ECS_REPO}/${IMAGE_NAME}:${BUILD_NUMBER}
+            # remove access to docker server sg
+            - aws ec2 revoke-security-group-ingress --group-id $AWS_DOCKER_SG_ID --cidr $EXTERNAL_IP/32 --protocol tcp --port 2376
+            # fix script permissions
+            - chmod +x deploy.sh ops/scripts/aws-stack-check.sh
+            # run build
+            - bash -c "./deploy.sh -d -s -e ${ENV} -t ${BUILD_NUMBER} -r ${AWS_REGION}"    
