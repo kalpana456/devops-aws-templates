@@ -66,5 +66,9 @@
     {
         "ParameterValue": "bucket-name",
         "ParameterKey": "S3BucketName"
+    },
+    {
+        "ParameterValue": "true",
+        "ParameterKey": "UpdatePolicy"
     }
 ]

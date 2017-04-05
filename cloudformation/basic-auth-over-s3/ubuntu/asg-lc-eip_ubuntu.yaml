@@ -58,9 +58,6 @@ Mappings:
       Arch: HVM64
     t2.small:
       Arch: HVM64
-
-  # This template is currently using the Ubuntu Distribution.
-  # You can find more details here: https://cloud-images.ubuntu.com/locator/ec2/
   AWSRegionArch2AMI:
     us-east-1:
       HVM64: ami-b14ba7a7
@@ -88,6 +85,7 @@ Metadata:
       Parameters:
       - S3BucketName
       - S3BucketPath
+      - UpdatePolicy
     - Label:
         default: Instance Settings
       Parameters:
@@ -193,6 +191,13 @@ Parameters:
     # Default: bucket-path
     Description: The path within the bucket - NOTE - it should start with / and end with path name; ex. /path/env.
     Type: String
+  UpdatePolicy:
+    Default: true
+    Description: Enable the Cloudfront Distribution.
+    Type: String
+    AllowedValues:
+      - true
+      - false
   TagClient:
     # Default: tag-client
     ConstraintDescription: Should be at least 3 characters long.
@@ -289,20 +294,23 @@ Resources:
                           rewrite  ^/$  /index.html  last;
 
                       location / {
+                            limit_except GET HEAD POST {
+                              deny  all;
+                            }
                             rewrite ^\/([A-z0-9])*$ /index.html;
                             auth_basic "Restricted";
                             auth_basic_user_file /etc/nginx/.htpasswd;
-                            rewrite ^\/([A-z0-9])*$ /index.html;
+
                             proxy_set_header Authorization "";
                             proxy_pass https://s3.amazonaws.com/${S3BucketName}${S3BucketPath}/;
                           }
 
-                          error_page  401 404              /40x.html;
+                          error_page  400 401 403 404 405   /40x.html;
                                    location = /40x.html {
                                    auth_basic          off;
                           }
 
-                          error_page   500 502 503 504  /50x.html;
+                          error_page  500 502 503 504  /50x.html;
                                    location = /50x.html {
                                    auth_basic          off;
                           }
@@ -395,19 +403,31 @@ Resources:
           python setup.py install
           # Install the files and packages from the metadata
           /usr/local/bin/cfn-init -v --stack ${AWS::StackName} --resource LaunchConfig --configsets InstallAndConfigure --region ${AWS::Region}
-          ELASTIC_IP=${ElasticIP}
-          ELASTIC_IP_ID=${ElasticIP.AllocationId}
-          INSTANCE_ID=`curl -s http://169.254.169.254/latest/meta-data/instance-id`
-          aws ec2 associate-address --instance-id $INSTANCE_ID --allocation-id $ELASTIC_IP_ID --allow-reassociation --region ${AWS::Region}
-          echo -e "updating policy file..."
-          sed -i -e "s|x.x.x.x|$ELASTIC_IP|g" /tmp/policy.json
-          echo -e "applying policy..."
-          aws s3api put-bucket-policy --bucket ${S3BucketName} --policy file:///tmp/policy.json
-          echo "error" > /usr/share/nginx/html/40x.html
-          echo "error" > /usr/share/nginx/html/50x.html
-          service nginx restart
+          CFN_INIT_CODE=$?
           # Signal the status from cfn-init
-          /usr/local/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource ServerASG --region ${AWS::Region}
+          /usr/local/bin/cfn-signal -e $CFN_INIT_CODE --stack ${AWS::StackName} --resource ServerASG --region ${AWS::Region}
+          if [ "$CFN_INIT_CODE" == "0" ]
+          then
+            echo updating elastic ip...
+            ELASTIC_IP=${ElasticIP}
+            ELASTIC_IP_ID=${ElasticIP.AllocationId}
+            INSTANCE_ID=`curl -s http://169.254.169.254/latest/meta-data/instance-id`
+            aws ec2 associate-address --instance-id $INSTANCE_ID --allocation-id $ELASTIC_IP_ID --allow-reassociation --region ${AWS::Region}
+            if [ "${UpdatePolicy}" == "true" ]
+            then
+              echo -e "updating bucket policy..."
+              sed -i -e "s|x.x.x.x|$ELASTIC_IP|g" /tmp/policy.json
+              echo -e "applying policy..."
+              aws s3api put-bucket-policy --bucket ${S3BucketName} --policy file:///tmp/policy.json
+            else
+              echo skipping policy update...
+            fi
+            echo "error" > /usr/share/nginx/html/40x.html
+            echo "error" > /usr/share/nginx/html/50x.html
+            service nginx restart
+          else
+            echo cfn-init failed
+          fi
 
   ServerASG:
     DependsOn: ElasticIP

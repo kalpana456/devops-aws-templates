@@ -27,6 +27,8 @@ The expected Basic Auth Password.
 The name of the S3 bucket you want to protect - NOTE - the existing bucket policy will be over-written. Also, it should not have any slashes (/).  
 - **S3BucketPath**  
 The path within the bucket - NOTE - it should start with / and end with path name; ex. /path/env.  
+- **UpdatePolicy**  
+Determines whether the S3 Bucket Access Policy will be updated to allow this instance to access it. NOTE - if true, this bucket policy will be overwritten.  
   
 ##### Instance Settings  
 - **OperatorEmail**  
