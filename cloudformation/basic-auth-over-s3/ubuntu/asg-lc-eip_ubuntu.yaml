@@ -477,7 +477,7 @@ Resources:
       AutoScalingRollingUpdate:
         PauseTime: PT10M
         MaxBatchSize: 1
-        MinInstancesInService: 0
+        MinInstancesInService: 1
         WaitOnResourceSignals: true
 
   NotificationTopic:
