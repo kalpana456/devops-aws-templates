@@ -26,7 +26,7 @@ test-build:
     # set up aws credentials
     - mkdir -p ~/.aws/
     - printf "[default]\naws_access_key_id=${AWS_ACCESS_KEY_ID}\naws_secret_access_key=${AWS_SECRET_ACCESS_KEY}" > ~/.aws/credentials;
-    - printf "[default]\nregion=$AWS_REGION" > ~/.aws/config;
+    - printf "[default]\nregion=$AWS_REGION\n" > ~/.aws/config;
     # get access to aws ecr
     - DOCKER_LOGIN=$(aws ecr get-login --region ${AWS_REGION})
     - eval $DOCKER_LOGIN
@@ -61,7 +61,7 @@ push-image:
     # set up aws credentials
     - mkdir -p ~/.aws/
     - printf "[default]\naws_access_key_id=${AWS_ACCESS_KEY_ID}\naws_secret_access_key=${AWS_SECRET_ACCESS_KEY}" > ~/.aws/credentials;
-    - printf "[default]\nregion=$AWS_REGION" > ~/.aws/config;
+    - printf "[default]\nregion=$AWS_REGION\n" > ~/.aws/config;
     # get access to aws ecr
     - DOCKER_LOGIN=$(aws ecr get-login --region ${AWS_REGION})
     - eval $DOCKER_LOGIN
@@ -85,8 +85,8 @@ dev-deploy:
     - export BUILD_NUMBER=0.${CI_PIPELINE_ID} && echo BUILD_NUMBER $BUILD_NUMBER
     # set up aws credentials
     - mkdir -p ~/.aws/
-    - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY" > ~/.aws/credentials;
-    - printf "[default]\nregion=$AWS_REGION" > ~/.aws/config;
+    - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY\n" > ~/.aws/credentials;
+    - printf "[default]\nregion=$AWS_REGION\n" > ~/.aws/config;
     # set script permissions
     - chmod +x deploy.sh ops/scripts/aws-stack-check.sh
     # kick off update stack
@@ -107,8 +107,8 @@ dev-deploy:
 #     - export BUILD_NUMBER=0.${CI_PIPELINE_ID} && echo BUILD_NUMBER $BUILD_NUMBER
 #     # set up aws credentials
 #     - mkdir -p ~/.aws/
-#     - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY" > ~/.aws/credentials;
-#     - printf "[default]\nregion=$AWS_REGION" > ~/.aws/config;
+#     - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY\n" > ~/.aws/credentials;
+#     - printf "[default]\nregion=$AWS_REGION\n" > ~/.aws/config;
 #     # set script permissions
 #     - chmod +x deploy.sh ops/scripts/aws-stack-check.sh
 #     # kick off update stack
@@ -130,8 +130,8 @@ dev-deploy:
 #     - export BUILD_NUMBER=0.${CI_PIPELINE_ID} && echo BUILD_NUMBER $BUILD_NUMBER
 #     # set up aws credentials
 #     - mkdir -p ~/.aws/
-#     - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY" > ~/.aws/credentials;
-#     - printf "[default]\nregion=$AWS_REGION" > ~/.aws/config;
+#     - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY\n" > ~/.aws/credentials;
+#     - printf "[default]\nregion=$AWS_REGION\n" > ~/.aws/config;
 #     # set script permissions
 #     - chmod +x deploy.sh ops/scripts/aws-stack-check.sh
 #     # kick off update stack

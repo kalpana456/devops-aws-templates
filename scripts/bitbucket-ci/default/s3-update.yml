@@ -12,8 +12,8 @@ pipelines:
             - export PATH=$PATH:~/.local/bin
             - pip3.4 install awscli --upgrade --user --ignore-installed six
             - mkdir -p ~/.aws/
-            - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY" > ~/.aws/credentials;
-            - printf "[default]\nregion=$AWS_REGION" > ~/.aws/config;
+            - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY\n" > ~/.aws/credentials;
+            - printf "[default]\nregion=$AWS_REGION\n" > ~/.aws/config;
             - cd -
             - npm install
             - npm run deploy
@@ -29,8 +29,8 @@ pipelines:
             - export PATH=$PATH:~/.local/bin
             - pip3.4 install awscli --upgrade --user --ignore-installed six
             - mkdir -p ~/.aws/
-            - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY" > ~/.aws/credentials;
-            - printf "[default]\nregion=$AWS_REGION" > ~/.aws/config;
+            - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY\n" > ~/.aws/credentials;
+            - printf "[default]\nregion=$AWS_REGION\n" > ~/.aws/config;
             - cd -
             - npm install
             - npm run deploy

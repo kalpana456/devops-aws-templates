@@ -33,7 +33,7 @@ build-image:
     - apk update && apk add py2-pip
     - pip install awscli --ignore-installed six
     - mkdir -p ~/.aws/
-    - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY" > ~/.aws/credentials;
+    - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY\n" > ~/.aws/credentials;
     - printf "[default]\nregion=$AWS_ECR_REGION" > ~/.aws/config;
     - DOCKER_LOGIN=$(aws ecr get-login --region ${AWS_ECR_REGION})
     - eval $DOCKER_LOGIN
@@ -54,7 +54,7 @@ update-stack:
     - apk update && apk add bash py2-pip
     - pip install awscli --ignore-installed six
     - mkdir -p ~/.aws/
-    - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY" > ~/.aws/credentials;
+    - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY\n" > ~/.aws/credentials;
     - printf "[default]\nregion=$AWS_ECR_REGION" > ~/.aws/config;
     - ./build.sh -d -s -e dev -t 0.${CI_PIPELINE_ID} -r ${AWS_ECR_REGION}
   only:
@@ -74,7 +74,7 @@ prod-deploy:
     - apk update && apk add bash py2-pip
     - pip install awscli --ignore-installed six
     - mkdir -p ~/.aws/
-    - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY" > ~/.aws/credentials;
+    - printf "[default]\naws_access_key_id=$AWS_ACCESS_KEY_ID\naws_secret_access_key=$AWS_SECRET_ACCESS_KEY\n" > ~/.aws/credentials;
     - printf "[default]\nregion=$AWS_ECR_REGION" > ~/.aws/config;
     - ./build.sh -d -s -e prd -t 0.${CI_PIPELINE_ID} -r ${AWS_ECR_REGION}
   only:
