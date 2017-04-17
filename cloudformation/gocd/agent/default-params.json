@@ -1,0 +1,62 @@
+[
+    {
+        "ParameterValue": "t2.small",
+        "ParameterKey": "WebServerInstanceType"
+    },
+    {
+        "ParameterValue": "x.x.x.x/32",
+        "ParameterKey": "SSHLocation"
+    },
+    {
+        "ParameterValue": "gocd-agent",
+        "ParameterKey": "TagName"
+    },
+    {
+        "ParameterValue": "client",
+        "ParameterKey": "TagClient"
+    },
+    {
+        "ParameterValue": "vpc-id",
+        "ParameterKey": "VPC"
+    },
+    {
+        "ParameterValue": "env",
+        "ParameterKey": "TagEnvironment"
+    },
+    {
+        "ParameterValue": "name@host.com",
+        "ParameterKey": "TagOwner"
+    },
+    {
+        "ParameterValue": "x.x.x.x/32",
+        "ParameterKey": "ExternalIP"
+    },
+    {
+        "ParameterValue": "project",
+        "ParameterKey": "TagProject"
+    },
+    {
+        "ParameterValue": "0.01",
+        "ParameterKey": "BuildVersion"
+    },
+    {
+        "ParameterValue": "subnet-id",
+        "ParameterKey": "PublicSubnet2"
+    },
+    {
+        "ParameterValue": "key-pair",
+        "ParameterKey": "WebServerKeyName"
+    },
+    {
+        "ParameterValue": "subnet-id",
+        "ParameterKey": "PublicSubnet1"
+    },
+    {
+        "ParameterValue": "sg-id",
+        "ParameterKey": "GoCDServerInstanceSGId"
+    },
+    {
+        "ParameterValue": "x.x.x.x",
+        "ParameterKey": "GoCDServerPrivateIP"
+    }
+]

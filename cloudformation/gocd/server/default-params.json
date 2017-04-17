@@ -1,0 +1,70 @@
+[
+    {
+        "ParameterValue": "t2.small",
+        "ParameterKey": "WebServerInstanceType"
+    },
+    {
+        "ParameterValue": "x.x.x.x/32",
+        "ParameterKey": "SSHLocation"
+    },
+    {
+        "ParameterValue": "gocd-server",
+        "ParameterKey": "TagName"
+    },
+    {
+        "ParameterValue": "client",
+        "ParameterKey": "TagClient"
+    },
+    {
+        "ParameterValue": "cert-arn",
+        "ParameterKey": "LoadBalancerAcmCert"
+    },
+    {
+        "ParameterValue": "vpc-id",
+        "ParameterKey": "VPC"
+    },
+    {
+        "ParameterValue": "env",
+        "ParameterKey": "TagEnvironment"
+    },
+    {
+        "ParameterValue": "name@host.com",
+        "ParameterKey": "TagOwner"
+    },
+    {
+        "ParameterValue": "x.x.x.x/32",
+        "ParameterKey": "ExternalIP"
+    },
+    {
+        "ParameterValue": "2",
+        "ParameterKey": "MaxInstanceCount"
+    },
+    {
+        "ParameterValue": "project",
+        "ParameterKey": "TagProject"
+    },
+    {
+        "ParameterValue": "0.01",
+        "ParameterKey": "BuildVersion"
+    },
+    {
+        "ParameterValue": "subnet-id",
+        "ParameterKey": "PublicSubnet2"
+    },
+    {
+        "ParameterValue": "key-pair",
+        "ParameterKey": "WebServerKeyName"
+    },
+    {
+        "ParameterValue": "1",
+        "ParameterKey": "DesiredInstanceCount"
+    },
+    {
+        "ParameterValue": "1",
+        "ParameterKey": "MinInstanceCount"
+    },
+    {
+        "ParameterValue": "subnet-id",
+        "ParameterKey": "PublicSubnet1"
+    }
+]
