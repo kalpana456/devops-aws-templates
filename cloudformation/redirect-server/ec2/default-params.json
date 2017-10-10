@@ -1,0 +1,82 @@
+[
+    {
+        "ParameterValue": "x.x.x.x/32",
+        "ParameterKey": "SSHLocation"
+    },
+    {
+        "ParameterValue": "name-env",
+        "ParameterKey": "TagName"
+    },
+    {
+        "ParameterValue": "client",
+        "ParameterKey": "TagClient"
+    },
+    {
+        "ParameterValue": "vpc-id",
+        "ParameterKey": "VPCID"
+    },
+    {
+        "ParameterValue": "/status",
+        "ParameterKey": "HealthCheckPath"
+    },
+    {
+        "ParameterValue": "domain.com",
+        "ParameterKey": "RedirectURL"
+    },
+    {
+        "ParameterValue": "env",
+        "ParameterKey": "TagEnvironment"
+    },
+    {
+        "ParameterValue": "name@host.com",
+        "ParameterKey": "TagOwner"
+    },
+    {
+        "ParameterValue": "subnet-id",
+        "ParameterKey": "SubnetPublic1"
+    },
+    {
+        "ParameterValue": "subnet-id",
+        "ParameterKey": "SubnetPublic2"
+    },
+    {
+        "ParameterValue": "echo sample init script",
+        "ParameterKey": "UserDataScript"
+    },
+    {
+        "ParameterValue": "key-pair",
+        "ParameterKey": "KeyName"
+    },
+    {
+        "ParameterValue": "name@host.com",
+        "ParameterKey": "OperatorEmail"
+    },
+    {
+        "ParameterValue": "3",
+        "ParameterKey": "MaxInstanceCount"
+    },
+    {
+        "ParameterValue": "project",
+        "ParameterKey": "TagProject"
+    },
+    {
+        "ParameterValue": "80",
+        "ParameterKey": "HealthCheckPort"
+    },
+    {
+        "ParameterValue": "t2.large",
+        "ParameterKey": "InstanceType"
+    },
+    {
+        "ParameterValue": "ssl-cert",
+        "ParameterKey": "SSLCertificateId"
+    },
+    {
+        "ParameterValue": "1",
+        "ParameterKey": "DesiredInstanceCount"
+    },
+    {
+        "ParameterValue": "1",
+        "ParameterKey": "MinInstanceCount"
+    }
+]

@@ -1,0 +1,126 @@
+[
+    {
+      "ParameterKey": "InstanceType",
+      "ParameterValue": "t2.small"
+    },
+    {
+      "ParameterKey": "KeyName",
+      "ParameterValue": "key-pair"
+    },
+    {
+      "ParameterKey": "OperatorEmail",
+      "ParameterValue": "name@email.com"
+    },
+    {
+      "ParameterKey": "ContainerImage",
+      "ParameterValue": "acount_id.dkr.ecr.us-east-1.amazonaws.com/image:version"
+    },
+    {
+      "ParameterKey": "BuildVersion",
+      "ParameterValue": "version"
+    },
+    {
+      "ParameterKey": "BuildDate",
+      "ParameterValue": "date"
+    },
+    {
+      "ParameterKey": "ContainerMaxCount",
+      "ParameterValue": "3"
+    },
+    {
+      "ParameterKey": "ContainerMinCount",
+      "ParameterValue": "1"
+    },
+    {
+      "ParameterKey": "ContainerDesiredCount",
+      "ParameterValue": "1"
+    },
+    {
+      "ParameterKey": "ContainerPortIn",
+      "ParameterValue": "8080"
+    },
+    {
+      "ParameterKey": "ContainerPortOut",
+      "ParameterValue": "8080"
+    },
+    {
+      "ParameterKey": "ContainerHealthCheckPath",
+      "ParameterValue": "/status"
+    },
+    {
+      "ParameterKey": "ContainerTargetPathPattern",
+      "ParameterValue": "/*"
+    },
+    {
+      "ParameterKey": "MountContainerPath",
+      "ParameterValue": "/var/lib/data"
+    },
+    {
+      "ParameterKey": "VolumeSourcePathKey",
+      "ParameterValue": "data"
+    },
+    {
+      "ParameterKey": "TaskMemory",
+      "ParameterValue": "512"
+    },
+    {
+      "ParameterKey": "VPCID",
+      "ParameterValue": "vpc-id"
+    },
+    {
+      "ParameterKey": "SubnetPublic1",
+      "ParameterValue": "subnet-id"
+    },
+    {
+      "ParameterKey": "SubnetPublic2",
+      "ParameterValue": "subnet-id"
+    },
+    {
+      "ParameterKey": "AllowIP",
+      "ParameterValue": "x.x.x.x/32"
+    },
+    {
+      "ParameterKey": "LoadBalancerListenPort",
+      "ParameterValue": "80"
+    },
+    {
+      "ParameterKey": "ClusterMaxSize",
+      "ParameterValue": "3"
+    },
+    {
+      "ParameterKey": "ClusterMinSize",
+      "ParameterValue": "1"
+    },
+    {
+      "ParameterKey": "ClusterDesiredSize",
+      "ParameterValue": "1"
+    },
+    {
+      "ParameterKey": "DeregistrationDelay",
+      "ParameterValue": "0"
+    },
+    {
+      "ParameterKey": "SSLCertificateId",
+      "ParameterValue": ""
+    },
+    {
+      "ParameterKey": "TagName",
+      "ParameterValue": "name-env"
+    },
+    {
+      "ParameterKey": "TagOwner",
+      "ParameterValue": "name@email.com"
+    },
+    {
+      "ParameterKey": "TagClient",
+      "ParameterValue": "client"
+    },
+    {
+      "ParameterKey": "TagProject",
+      "ParameterValue": "project"
+    },
+    {
+      "ParameterKey": "TagEnvironment",
+      "ParameterValue": "env"
+    }
+]

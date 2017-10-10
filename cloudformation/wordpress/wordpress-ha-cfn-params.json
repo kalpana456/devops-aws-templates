@@ -1,0 +1,113 @@
+[{
+        "ParameterValue": "password",
+        "ParameterKey": "BlogAdminPassword"
+    },
+    {
+        "ParameterValue": "t2.small",
+        "ParameterKey": "WebServerInstanceType"
+    },
+    {
+        "ParameterValue": "x.x.x.x/32",
+        "ParameterKey": "SSHLocation"
+    },
+    {
+        "ParameterValue": "x.x.x.x/32",
+        "ParameterKey": "ExternalIP"
+    },
+    {
+        "ParameterValue": "tag-name-env",
+        "ParameterKey": "TagName"
+    },
+    {
+        "ParameterValue": "client-name",
+        "ParameterKey": "TagClient"
+    },
+    {
+        "ParameterValue": "parent-vpc-dev",
+        "ParameterKey": "ParentVPCStack"
+    },
+    {
+        "ParameterValue": "dev",
+        "ParameterKey": "TagEnvironment"
+    },
+    {
+        "ParameterValue": "name@host.com",
+        "ParameterKey": "TagOwner"
+    },
+    {
+        "ParameterValue": "admin",
+        "ParameterKey": "BlogAdminUsername"
+    },
+    {
+        "ParameterValue": "name@host.com",
+        "ParameterKey": "BlogAdminEmail"
+    },
+    {
+        "ParameterValue": "echo sample init script",
+        "ParameterKey": "UserDataScript"
+    },
+    {
+        "ParameterValue": "db.t2.small",
+        "ParameterKey": "DBServerInstanceType"
+    },
+    {
+        "ParameterValue": "name@host.com",
+        "ParameterKey": "OperatorEmail"
+    },
+    {
+        "ParameterValue": "7",
+        "ParameterKey": "DBBackupRetentionInDays"
+    },
+    {
+        "ParameterValue": "db-password",
+        "ParameterKey": "DBPassword"
+    },
+    {
+        "ParameterValue": "",
+        "ParameterKey": "NewRelicLicenseKey"
+    },
+    {
+        "ParameterValue": "content-hub",
+        "ParameterKey": "TagProject"
+    },
+    {
+        "ParameterValue": "1",
+        "ParameterKey": "WebServerLogsRetentionInDays"
+    },
+    {
+        "ParameterValue": "Title",
+        "ParameterKey": "BlogTitle"
+    },
+    {
+        "ParameterValue": "0.01",
+        "ParameterKey": "ConfigVersion"
+    },
+    {
+        "ParameterValue": "domain.com",
+        "ParameterKey": "SiteFQDN"
+    },
+    {
+        "ParameterValue": "1",
+        "ParameterKey": "MinInstanceCount"
+    },
+    {
+        "ParameterValue": "3",
+        "ParameterKey": "MaxInstanceCount"
+    },
+    {
+        "ParameterValue": "1",
+        "ParameterKey": "DesiredInstanceCount"
+    },
+    {
+        "ParameterValue": "key-pair",
+        "ParameterKey": "WebServerKeyName"
+    },
+    {
+        "ParameterValue": "admin",
+        "ParameterKey": "DBUsername"
+    },
+    {
+        "ParameterValue": "acm-cert-arn",
+        "ParameterKey": "ElbAcmCertificate"
+    }
+]

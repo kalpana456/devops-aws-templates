@@ -1,0 +1,129 @@
+[{
+        "ParameterKey": "InstanceType",
+        "ParameterValue": "t2.small"
+    },
+    {
+        "ParameterKey": "KeyName",
+        "ParameterValue": "grafana-dev"
+    },
+    {
+        "ParameterKey": "OperatorEmail",
+        "ParameterValue": "name@host.com"
+    },
+    {
+        "ParameterKey": "ContainerImage",
+        "ParameterValue": "grafana/grafana:latest"
+    },
+    {
+        "ParameterKey": "BuildVersion",
+        "ParameterValue": "latest"
+    },
+    {
+        "ParameterKey": "BuildDate",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "ContainerMaxCount",
+        "ParameterValue": "2"
+    },
+    {
+        "ParameterKey": "ContainerMinCount",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "ContainerDesiredCount",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "ContainerPortIn",
+        "ParameterValue": "3000"
+    },
+    {
+        "ParameterKey": "ContainerPortOut",
+        "ParameterValue": "3000"
+    },
+    {
+        "ParameterKey": "ContainerHealthCheckPath",
+        "ParameterValue": "/login"
+    },
+    {
+        "ParameterKey": "ContainerTargetPathPattern",
+        "ParameterValue": "/*"
+    },
+    {
+        "ParameterKey": "TaskMemory",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "GrafanaDomainName",
+        "ParameterValue": "domain.com"
+    },
+    {
+        "ParameterKey": "VPCID",
+        "ParameterValue": "vpc-xxx"
+    },
+    {
+        "ParameterKey": "SubnetPublic1",
+        "ParameterValue": "subnet-xxx"
+    },
+    {
+        "ParameterKey": "SubnetPublic2",
+        "ParameterValue": "subnet-xxx"
+    },
+    {
+        "ParameterKey": "AllowIP",
+        "ParameterValue": "x.x.x.x/32"
+    },
+    {
+        "ParameterKey": "DBUsername",
+        "ParameterValue": "admin"
+    },
+    {
+        "ParameterKey": "DBPassword",
+        "ParameterValue": "password"
+    },
+    {
+        "ParameterKey": "LoadBalancerListenPort",
+        "ParameterValue": "80"
+    },
+    {
+        "ParameterKey": "ClusterMaxSize",
+        "ParameterValue": "3"
+    },
+    {
+        "ParameterKey": "ClusterMinSize",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "ClusterDesiredSize",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "DeregistrationDelay",
+        "ParameterValue": "0"
+    },
+    {
+        "ParameterKey": "SSLCertificateId",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "TagName",
+        "ParameterValue": "name-dev"
+    },
+    {
+        "ParameterKey": "TagOwner",
+        "ParameterValue": "name@host.com"
+    },
+    {
+        "ParameterKey": "TagClient",
+        "ParameterValue": "client"
+    },
+    {
+        "ParameterKey": "TagProject",
+        "ParameterValue": "project"
+    },
+    {
+        "ParameterKey": "TagEnvironment",
+        "ParameterValue": "dev"
+    }
+]

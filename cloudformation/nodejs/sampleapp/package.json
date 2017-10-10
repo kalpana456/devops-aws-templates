@@ -1,0 +1,21 @@
+{
+    "name": "server",
+    "version": "1.0.0",
+    "description": "",
+    "main": "app.js",
+    "scripts": {
+        "start": "node app.js",
+        "test": "ava -t 30s test/*.test.js | tap-dot"
+    },
+    "dependencies": {
+        "express": "^4.15.2"
+    },
+    "devDependencies": {
+        "ava": "^0.19.1",
+        "nodejs-repo-tools": "git+https://git@github.com/GoogleCloudPlatform/nodejs-repo-tools.git",
+        "supertest": "^3.0.0",
+        "tap-dot": "^1.0.5"
+    },
+    "author": "",
+    "license": "ISC"
+}

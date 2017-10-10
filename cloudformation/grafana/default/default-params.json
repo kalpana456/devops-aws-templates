@@ -1,0 +1,70 @@
+[
+    {
+        "ParameterValue": "grafana",
+        "ParameterKey": "TagName"
+    },
+    {
+        "ParameterValue": "client-name",
+        "ParameterKey": "TagClient"
+    },
+    {
+        "ParameterValue": "vpc-id",
+        "ParameterKey": "VPCID"
+    },
+    {
+        "ParameterValue": "dev",
+        "ParameterKey": "TagEnvironment"
+    },
+    {
+        "ParameterValue": "0.01",
+        "ParameterKey": "BuildVersion"
+    },
+    {
+        "ParameterValue": "name@email.com",
+        "ParameterKey": "TagOwner"
+    },
+    {
+        "ParameterValue": "subnet-id",
+        "ParameterKey": "SubnetPublic1"
+    },
+    {
+        "ParameterValue": "grafana.domain.com",
+        "ParameterKey": "GrafanaDomainName"
+    },
+    {
+        "ParameterValue": "subnet-id",
+        "ParameterKey": "SubnetPublic2"
+    },
+    {
+        "ParameterValue": "",
+        "ParameterKey": "UserDataScript"
+    },
+    {
+        "ParameterValue": "grafana-dev",
+        "ParameterKey": "KeyName"
+    },
+    {
+        "ParameterValue": "name@email.com",
+        "ParameterKey": "OperatorEmail"
+    },
+    {
+        "ParameterValue": "password",
+        "ParameterKey": "DBPassword"
+    },
+    {
+        "ParameterValue": "x.x.x.x/32",
+        "ParameterKey": "AllowIP"
+    },
+    {
+        "ParameterValue": "grafana",
+        "ParameterKey": "TagProject"
+    },
+    {
+        "ParameterValue": "t2.small",
+        "ParameterKey": "InstanceType"
+    },
+    {
+        "ParameterValue": "admin",
+        "ParameterKey": "DBUsername"
+    }
+]

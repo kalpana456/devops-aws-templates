@@ -1,0 +1,73 @@
+[{
+        "ParameterValue": "docker-server-dev",
+        "ParameterKey": "KeyName"
+    },
+    {
+        "ParameterValue": "name@host.com",
+        "ParameterKey": "OperatorEmail"
+    },
+    {
+        "ParameterValue": "0.01",
+        "ParameterKey": "ConfigVersion"
+    },
+    {
+        "ParameterValue": "x.x.x.x/32",
+        "ParameterKey": "SSHLocation"
+    },
+    {
+        "ParameterValue": "bucket-name",
+        "ParameterKey": "KeyBucket"
+    },
+    {
+        "ParameterValue": "domain.com",
+        "ParameterKey": "SiteFQDN"
+    },
+    {
+        "ParameterValue": "lantern",
+        "ParameterKey": "KeyPass"
+    },
+    {
+        "ParameterValue": "docker-server-dev",
+        "ParameterKey": "TagName"
+    },
+    {
+        "ParameterValue": "client",
+        "ParameterKey": "TagClient"
+    },
+    {
+        "ParameterValue": "vpc-id",
+        "ParameterKey": "VPCID"
+    },
+    {
+        "ParameterValue": "subnet-id",
+        "ParameterKey": "SubnetPublic1"
+    },
+    {
+        "ParameterValue": "subnet-id",
+        "ParameterKey": "SubnetPublic2"
+    },
+    {
+        "ParameterValue": "docker-server",
+        "ParameterKey": "TagProject"
+    },
+    {
+        "ParameterValue": "8",
+        "ParameterKey": "StorageSize"
+    },
+    {
+        "ParameterValue": "dev",
+        "ParameterKey": "TagEnvironment"
+    },
+    {
+        "ParameterValue": "name@host.com",
+        "ParameterKey": "TagOwner"
+    },
+    {
+        "ParameterValue": "t2.small",
+        "ParameterKey": "InstanceType"
+    },
+    {
+        "ParameterValue": "echo sample init script",
+        "ParameterKey": "UserDataScript"
+    }
+]

@@ -1,0 +1,997 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Wordpress: built for HA and FT. version 0.01'
+Metadata:
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+    - Label:
+        default: 'Parent Stacks'
+      Parameters:
+      - ParentVPCStack
+    # - Label:
+    #     default: 'VPC Parameters'
+    #   Parameters:
+    #   - VPCID
+    #   - SubnetPublic1
+    #   - AvailabilityZone1
+    #   - SubnetPublic2
+    #   - AvailabilityZone2
+    - Label:
+        default: 'Domain Name and SSL certificates'
+      Parameters:
+      - ElbAcmCertificate
+    - Label:
+        default: 'Wordpress Parameters'
+      Parameters:
+      - BlogTitle
+      - BlogAdminUsername
+      - BlogAdminPassword
+      - BlogAdminEmail
+    - Label:
+        default: 'EC2 Parameters'
+      Parameters:
+      - ConfigVersion
+      - WebServerKeyName
+      - WebServerIAMUserSSHAccess
+      - WebServerInstanceType
+      - WebServerLogsRetentionInDays
+      - NewRelicLicenseKey
+      - SSHLocation
+      - ExternalIP
+      - SiteFQDN
+      # - CertificateBucket
+    - Label:
+        default: ASG Settings
+      Parameters:
+      - MaxInstanceCount
+      - MinInstanceCount
+      - DesiredInstanceCount
+    - Label:
+        default: 'Database Parameters'
+      Parameters:
+      - DBServerInstanceType
+      - DBUsername
+      - DBPassword
+      - DBBackupRetentionInDays
+    - Label:
+        default: 'Stack Tags'
+      Parameters:
+      - TagName
+      - TagOwner
+      - TagClient
+      - TagProject
+      - TagEnvironment
+Parameters:
+  ParentVPCStack:
+    Description: 'Stack name of parent VPC stack based on vpc/vpc-*azs.yaml template.'
+    Type: String
+  OperatorEmail:
+    Description: 'Email address to notify for updates.'
+    Type: String
+    AllowedPattern: "([a-zA-Z0-9_\\-\\.]+)@((\\[[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.)|(([a-zA-Z0-9\\-]+\\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\\]?)"
+    ConstraintDescription: 'must be a valid email address.'
+    Default: "name@host.com"
+  # VPCID:
+  #   Description: 'VPC ID for the stack.'
+  #   Type: AWS::EC2::VPC::Id
+  #   Default: 'vpc-xxx'
+  ElbAcmCertificate:
+    Description: 'The ACM Certificate ARN of certificate for the ELB.'
+    Type: String
+    Default: 'acm-cert-arn'
+  BlogTitle:
+    Description: 'The title of the Wordpress blog.'
+    Type: String
+    Default: 'Futurevision'
+  BlogAdminUsername:
+    Description: 'A username for the Wordpress admin.'
+    Type: String
+    MinLength: 4
+    MaxLength: 16
+    Default: admin
+  BlogAdminPassword:
+    Description: 'A password for the Wordpress admin.'
+    Type: String
+    MinLength: 8
+    MaxLength: 16
+    NoEcho: true
+  BlogAdminEmail:
+    Description: 'The email address of the Wordpress admin.'
+    Type: String
+    Default: "name@host.com"
+  ConfigVersion:
+    Description: 'The configuration version for this template.'
+    Type: String
+    Default: "0.01"
+  SiteFQDN:
+    Description: 'The domain that the site will be available at'
+    Type: String
+    Default: "*"
+  # CertificateBucket:
+  #   Description: Main Bucket name where the config source is installed. Should not start or end with SLASH
+  #   Type: String
+  MinInstanceCount:
+    Description: The minimum no of instances the ASG allows
+    Type: Number
+    Default: 1
+  MaxInstanceCount:
+    Description: The maximum no of instances the ASG allows
+    Type: Number
+    Default: 4
+  DesiredInstanceCount:
+    Description: The minimum no of instances the ASG allows
+    Type: Number
+    Default: 1
+  WebServerKeyName:
+    Description: 'Optional key pair of the ec2-user to establish a SSH connection to the web server.'
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: 'cw-future-dev'
+    ConstraintDescription: 'must be the name of an existing EC2 KeyPair.'
+  WebServerInstanceType:
+    Description: 'The instance type of web servers (e.g. t2.micro).'
+    Type: String
+    Default: 't2.medium'
+    AllowedValues: [ 't2.micro', 't2.small', 't2.medium', 't2.large', 'm4.large', 'm4.xlarge', 'm4.2xlarge', 'm4.4xlarge' ]
+  WebServerLogsRetentionInDays:
+    Description: 'Specifies the number of days you want to retain log events.'
+    Type: Number
+    Default: 14
+    AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653]
+  DBServerInstanceType:
+    Description: 'The instance type of database server (e.g. db.t2.micro).'
+    Type: String
+    Default: 'db.t2.medium'
+    AllowedValues: [ 'db.t2.micro', 'db.t2.small', 'db.t2.medium', 'db.t2.large', 'db.m4.large', 'db.m4.xlarge' ]
+  DBUsername:
+    Description: 'A username for the Wordpress admin.'
+    Type: String
+    MinLength: 4
+    MaxLength: 16
+    Default: admin
+  DBPassword:
+    Description: 'A password for the Wordpress admin.'
+    Type: String
+    MinLength: 8
+    MaxLength: 16
+    NoEcho: true
+  DBBackupRetentionInDays:
+    Description: 'Specifies the number of days you want to retain Database Backups.'
+    Type: Number
+    Default: 14
+  NewRelicLicenseKey:
+    Description: 'Optional New Relic License Key will install the New Relic Servers for Linux agent.'
+    Type: String
+    Default: ''
+    NoEcho: true
+  # SubnetPublic1:
+  #   Description: 'First Public subnet you want to use.'
+  #   Type: AWS::EC2::Subnet::Id
+  #   Default: 'subnet-xxx'
+  # AvailabilityZone1:
+  #   Description: 'Availability Zone for first Subnet.'
+  #   Type: String
+  #   MinLength: 1
+  #   MaxLength: 1
+  #   Default: 'a'
+  # SubnetPublic2:
+  #   Description: 'Second Public subnet you want to use.'
+  #   Type: AWS::EC2::Subnet::Id
+  #   Default: 'subnet-xxx'
+  # AvailabilityZone2:
+  #   Description: 'Availability Zone for second Subnet'
+  #   Type: String
+  #   MinLength: 1
+  #   MaxLength: 1
+  #   Default: 'c'
+  SSHLocation:
+    Description: 'The IP address range that can be used to SSH to the EC2 instances'
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: "10.0.0.0/8"
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: 'must be a valid IP CIDR range of the form x.x.x.x/x.'
+  ExternalIP:
+    Description: 'The IP address range that can be used to access the load balancer'
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    # Default: x.x.x.x/32
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: 'must be a valid IP CIDR range of the form x.x.x.x/x.'
+  UserDataScript:
+    Description: 'The custom script that instances will run on boot'
+    Type: String
+    Default: 'echo sample init script'
+  TagName:
+      Description: 'Tag used for Name of the resource'
+      Type: String
+      MinLength: 1
+      MaxLength: 127
+      Default: 'cw-future-dev'
+  TagClient:
+    Description: 'Tag used for Client of the resource'
+    Type: String
+    MinLength: 1
+    MaxLength: 127
+    Default: 'rga'
+  TagOwner:
+    Description: 'Tag used for Owner of the resource'
+    Type: String
+    MinLength: 1
+    MaxLength: 127
+    Default: 'name@host.com'
+  TagProject:
+    Description: 'Tag used for Project of the resource'
+    Type: String
+    MinLength: 1
+    MaxLength: 127
+    Default: 'connectedwork'
+  TagEnvironment:
+    Description: 'Tag used for Environment of the resource'
+    Type: String
+    MinLength: 1
+    MaxLength: 127
+    Default: 'dev'
+Mappings:
+  AWSRegionArch2AMI:
+    'us-east-1':
+      HVM64: 'ami-b14ba7a7'
+    'us-west-1':
+      HVM64: 'ami-94bdeef4'
+    'us-west-2':
+      HVM64: 'ami-221ea342'
+  AWSInstanceType2Arch:
+    t2.micro:
+      Arch: 'HVM64'
+    t2.small:
+      Arch: 'HVM64'
+    t2.medium:
+      Arch: 'HVM64'
+    t2.large:
+      Arch: 'HVM64'
+    m4.large:
+      Arch: 'HVM64'
+    m4.xlarge:
+      Arch: 'HVM64'
+    m4.2xlarge:
+      Arch: 'HVM64'
+    m4.4xlarge:
+      Arch: 'HVM64'
+
+Conditions:
+  HasNewRelic: !Not [!Equals [!Ref NewRelicLicenseKey, '']]
+  AddSSLIntegration: !Not [!Equals [!Ref ElbAcmCertificate, '']]
+
+Resources:
+  WebServerLogs:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      RetentionInDays: !Ref WebServerLogsRetentionInDays
+
+  NotificationTopic:
+    Type: 'AWS::SNS::Topic'
+    Properties:
+      Subscription:
+        - Endpoint: !Ref OperatorEmail
+          Protocol: email
+
+  LoadBalancerSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'wordpress-elb'
+      VpcId:
+        'Fn::ImportValue': !Sub '${ParentVPCStack}-VPC'
+      SecurityGroupIngress:
+      - FromPort: 80
+        IpProtocol: tcp
+        CidrIp: !Ref ExternalIP
+        ToPort: 80
+      Tags:
+      - Key: Name
+        Value: !Join [ "", [ !Ref TagName, "-elb-sg"] ]
+      - Key: owner
+        Value: !Ref TagOwner
+      - Key: client
+        Value: !Ref TagClient
+      - Key: project
+        Value: !Ref TagProject
+      - Key: environment
+        Value: !Ref TagEnvironment
+
+  SSLLoadBalancerSGIngress:
+        Type: AWS::EC2::SecurityGroupIngress
+        Condition: AddSSLIntegration
+        Properties:
+            CidrIp: !Ref ExternalIP
+            FromPort: 443
+            GroupId: !Ref LoadBalancerSecurityGroup
+            IpProtocol: tcp
+            ToPort: 443
+
+  WebServerSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'wordpress-ec2'
+      VpcId:
+        'Fn::ImportValue': !Sub '${ParentVPCStack}-VPC'
+      SecurityGroupIngress:
+      - FromPort: 80
+        IpProtocol: tcp
+        SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
+        ToPort: 80
+      - FromPort: 443
+        IpProtocol: tcp
+        SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
+        ToPort: 443
+      - FromPort: 22
+        IpProtocol: tcp
+        CidrIp: !Ref SSHLocation
+        ToPort: 22
+      - FromPort: -1
+        IpProtocol: icmp
+        CidrIp: !Ref SSHLocation
+        ToPort: -1
+      Tags:
+      - Key: Name
+        Value: !Join [ "", [ !Ref TagName, "-web-sg"] ]
+      - Key: owner
+        Value: !Ref TagOwner
+      - Key: client
+        Value: !Ref TagClient
+      - Key: project
+        Value: !Ref TagProject
+      - Key: environment
+        Value: !Ref TagEnvironment
+  DatabaseSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'wordpress-rds'
+      VpcId:
+        'Fn::ImportValue': !Sub '${ParentVPCStack}-VPC'
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 3306
+        ToPort: 3306
+        SourceSecurityGroupId: !Ref WebServerSecurityGroup
+      Tags:
+      - Key: Name
+        Value: !Join [ "", [ !Ref TagName, "-db-sg"] ]
+      - Key: owner
+        Value: !Ref TagOwner
+      - Key: client
+        Value: !Ref TagClient
+      - Key: project
+        Value: !Ref TagProject
+      - Key: environment
+        Value: !Ref TagEnvironment
+  LoadBalancer:
+    Type: 'AWS::ElasticLoadBalancing::LoadBalancer'
+    Properties:
+      Subnets:
+      - 'Fn::ImportValue': !Sub '${ParentVPCStack}-PublicSubnet1'
+      - 'Fn::ImportValue': !Sub '${ParentVPCStack}-PublicSubnet2'
+      Listeners:
+      - InstancePort: 80
+        InstanceProtocol: HTTP
+        LoadBalancerPort: 80
+        Protocol: HTTP
+      - InstancePort: 443
+        InstanceProtocol: HTTPS
+        LoadBalancerPort: 443
+        Protocol: HTTPS
+        SSLCertificateId: !Ref ElbAcmCertificate
+      HealthCheck:
+        HealthyThreshold: 2
+        Interval: 5
+        Target: 'TCP:80'
+        Timeout: 3
+        UnhealthyThreshold: 2
+      SecurityGroups:
+      - !Ref LoadBalancerSecurityGroup
+      Scheme: 'internet-facing'
+      CrossZone: true
+      Tags:
+        - Key: Name
+          Value: !Join [ "", [ !Ref TagName, "-elb"] ]
+        - Key: owner
+          Value: !Ref TagOwner
+        - Key: client
+          Value: !Ref TagClient
+        - Key: project
+          Value: !Ref TagProject
+        - Key: environment
+          Value: !Ref TagEnvironment
+  DBSubnetGroup:
+    Type: 'AWS::RDS::DBSubnetGroup'
+    Properties:
+      DBSubnetGroupDescription: 'DB subnet group'
+      SubnetIds:
+      - 'Fn::ImportValue': !Sub '${ParentVPCStack}-PublicSubnet1'
+      - 'Fn::ImportValue': !Sub '${ParentVPCStack}-PublicSubnet2'
+  Database:
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      AllocatedStorage: 5
+      BackupRetentionPeriod: !Ref DBBackupRetentionInDays
+      DBInstanceClass: !Ref DBServerInstanceType
+      DBName: wordpress
+      Engine: MySQL
+      MasterUsername:
+        !Ref DBUsername
+      MasterUserPassword:
+        !Ref DBPassword
+      VPCSecurityGroups:
+      - !Ref DatabaseSecurityGroup
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      MultiAZ: true
+      StorageType: gp2
+      # StorageEncrypted: true
+      Tags:
+        - Key: Name
+          Value: !Join [ "", [ !Ref TagName, "-db"] ]
+        - Key: owner
+          Value: !Ref TagOwner
+        - Key: client
+          Value: !Ref TagClient
+        - Key: project
+          Value: !Ref TagProject
+        - Key: environment
+          Value: !Ref TagEnvironment
+  WebServerInstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Path: '/'
+      Roles:
+      - !Ref WebServerIAMRole
+  WebServerIAMRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - 'ec2.amazonaws.com'
+          Action:
+          - 'sts:AssumeRole'
+      Path: '/'
+      Policies:
+      - PolicyName: logs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - 'logs:CreateLogGroup'
+            - 'logs:CreateLogStream'
+            - 'logs:PutLogEvents'
+            - 'logs:DescribeLogStreams'
+            Resource:
+            - 'arn:aws:logs:*:*:*'
+          # - Effect: Allow
+          #   Action:
+          #   - s3:*
+          #   Resource:
+          #   - !Join [ "", [ "arn:aws:s3:::", !Ref CertificateBucket, "/*" ] ]
+  LaunchConfiguration:
+    Type: 'AWS::AutoScaling::LaunchConfiguration'
+    Metadata:
+      'AWS::CloudFormation::Init':
+        configSets:
+          default:
+            !If
+            - HasNewRelic
+            - [newrelic, config]
+            - [config]
+        newrelic:
+          files:
+            '/root/newrelic_setup.sh':
+              content: !Sub |
+                #!/bin/bash -ex
+                echo 'deb http://apt.newrelic.com/debian/ newrelic non-free' | sudo tee /etc/apt/sources.list.d/newrelic.list
+                wget -O- https://download.newrelic.com/548C16BF.gpg | apt-key add -
+                apt-get update
+                apt-get install -y newrelic-sysmond
+                cp /root/newrelic/nrsysmond.cfg /etc/newrelic/nrsysmond.cfg
+                chown newrelic:newrelic /etc/newrelic/nrsysmond.cfg
+              mode: '000500'
+              owner: root
+              group: root
+            '/root/newrelic/nrsysmond.cfg':
+              content: !Sub |
+                license_key=${NewRelicLicenseKey}
+                loglevel=info
+                logfile=/var/log/newrelic/nrsysmond.log
+                labels=StackName:${AWS::StackName};AccountId:${AWS::AccountId};Region:${AWS::Region}
+              mode: '000640'
+              owner: root
+              group: root
+          commands:
+            01_init:
+              command: '/root/newrelic_setup.sh'
+              cwd: '/root'
+        config:
+          packages:
+            apt:
+              php7.0: []
+              php7.0-opcache: []
+              php7.0-mysql: []
+              php-ldap: []
+              php-mcrypt: []
+              php7.0-soap: []
+              mysql-server: []
+              apache2: []
+              libapache2-mod-php7.0: []
+              python-pip: []
+              unattended-upgrades: []
+              #emacs: []
+          files:
+            '/root/init.sh':
+              content: !Sub |
+                #!/bin/bash -ex
+                # install awslogs
+                curl https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py -O
+                python ./awslogs-agent-setup.py -n --region ${AWS::Region} --configfile=/var/awslogs/etc/aws.conf
+                # install mods
+                a2enmod rewrite
+                a2enmod ssl
+                # install self signed certs
+                mkdir -p /etc/apache2/ssl
+                openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj "/C=US/ST=NY/L=NewYork/O=Anon/CN=www.example.com"  -keyout /etc/apache2/ssl/apache.key  -out  /etc/apache2/ssl/apache.crt
+                # setup wp database
+                cat ~/wp_setup.sql | mysql --defaults-extra-file=/etc/mysql/debian.cnf
+                cd ~/
+                wget https://wordpress.org/latest.tar.gz
+                tar -xzvf latest.tar.gz
+                #set up apache configs
+                if [ -f /etc/apache2/sites-enabled/000-default.conf ]
+                 then
+                  rm /etc/apache2/sites-enabled/000-default.conf
+                fi
+                ln -s /etc/apache2/sites-available/wp-vhost.conf /etc/apache2/sites-enabled/
+                sed -i -e 's|;extension=php_soap.dll|extension=php_soap.dll|g' /etc/php/7.0/apache2/php.ini
+                # restart apache
+                service apache2 restart
+              mode: '000500'
+              owner: root
+              group: root
+            '/root/wordpress/wp-config.php':
+              content: !Sub |
+                <?php
+                define('DB_NAME', 'wordpress');
+                define('DB_USER', '${DBUsername}');
+                define('DB_PASSWORD', '${DBPassword}');
+                define('DB_HOST', '${Database.Endpoint.Address}');
+                define('DB_CHARSET', 'utf8');
+                define('DB_COLLATE', '');
+                define('AUTH_KEY',         'put your unique phrase here');
+                define('SECURE_AUTH_KEY',  'put your unique phrase here');
+                define('LOGGED_IN_KEY',    'put your unique phrase here');
+                define('NONCE_KEY',        'put your unique phrase here');
+                define('AUTH_SALT',        'put your unique phrase here');
+                define('SECURE_AUTH_SALT', 'put your unique phrase here');
+                define('LOGGED_IN_SALT',   'put your unique phrase here');
+                define('NONCE_SALT',       'put your unique phrase here');
+                $table_prefix  = 'wp_';
+                define('WP_DEBUG', false);
+                if ( !defined('ABSPATH') )
+                  define('ABSPATH', dirname(__FILE__) . '/');
+                /** Sets up WordPress vars and included files. */
+                require_once(ABSPATH . 'wp-settings.php');
+              mode: '000500'
+              owner: root
+              group: root
+            '/etc/apache2/sites-available/wp-vhost.conf':
+              content: !Sub |
+                <VirtualHost *:80>
+                ServerAdmin webmaster@htdocs
+                DocumentRoot /var/www/html
+                ServerName ${SiteFQDN}
+
+                <Directory />
+                    Options FollowSymLinks
+                    AllowOverride None
+                </Directory>
+
+                <Directory /var/www/html>
+                            Options Indexes FollowSymLinks MultiViews
+                                    AllowOverride All
+                            Order allow,deny
+                    allow from all
+                </Directory>
+
+                # Basic Security (Directory|File)
+                <DirectoryMatch .*\.(git|svn)/.*>
+                    Order allow,deny
+                    Deny From All
+                </DirectoryMatch>
+                <Files ~ "^\.(htaccess|htgroup)">
+                    Order allow,deny
+                    Deny from all
+                </Files>
+                # END Basic Security (Direcotry|File)
+
+                ScriptAlias /cgi-bin/ /usr/lib/cgi-bin/
+                <Directory "/usr/lib/cgi-bin">
+                    AllowOverride None
+                    Options +ExecCGI -MultiViews +SymLinksIfOwnerMatch
+                    Order allow,deny
+                    Allow from all
+                </Directory>
+
+                ErrorLog  /var/log/apache2/htdocs-error.log
+
+                # Possible values include: debug, info, notice, warn, error, crit,
+                # alert, emerg.
+                LogLevel warn
+
+                LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\"" combined
+                CustomLog /var/log/apache2/htdocs-access.log combined
+
+                ### SSL ###
+                # SSLEngine on
+                # SSLCertificateFile /etc/apache2/ssl/star_domain_com.crt
+                # SSLCertificateChainFile /etc/apache2/ssl/CertCA.crt
+                # SSLCertificateKeyFile /etc/apache2/ssl/star_domain_com_priv.key
+                ### END SSL ###
+
+                </VirtualHost>
+
+                <IfModule mod_ssl.c>
+                  <VirtualHost *:443>
+                      ServerAdmin webmaster@htdocs
+                      DocumentRoot /var/www/html
+                      ServerName ${SiteFQDN}
+
+                      <Directory />
+                        Options FollowSymLinks
+                        AllowOverride None
+                      </Directory>
+
+                      <Directory /var/www/html>
+                                  Options Indexes FollowSymLinks MultiViews
+                                          AllowOverride All
+                                  Order allow,deny
+                          allow from all
+                      </Directory>
+
+                      # Basic Security (Directory|File)
+                      <DirectoryMatch .*\.(git|svn)/.*>
+                          Order allow,deny
+                          Deny From All
+                      </DirectoryMatch>
+                      <Files ~ "^\.(htaccess|htgroup)">
+                          Order allow,deny
+                          Deny from all
+                      </Files>
+                      # END Basic Security (Direcotry|File)
+
+                      ScriptAlias /cgi-bin/ /usr/lib/cgi-bin/
+                      <Directory "/usr/lib/cgi-bin">
+                          AllowOverride None
+                          Options +ExecCGI -MultiViews +SymLinksIfOwnerMatch
+                          Order allow,deny
+                          Allow from all
+                      </Directory>
+
+                      ErrorLog  /var/log/apache2/htdocs-error.log
+
+                      # Possible values include: debug, info, notice, warn, error, crit,
+                      # alert, emerg.
+                      LogLevel warn
+
+                      LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\"" combined
+                      CustomLog /var/log/apache2/htdocs-access.log combined
+
+                      ### SSL ###
+                      # SSLEngine on
+                      SSLCertificateFile /etc/apache2/ssl/apache.crt
+                      #SSLCertificateChainFile /etc/apache2/ssl/apache_chain.crt
+                      SSLCertificateKeyFile /etc/apache2/ssl/apache.key
+                      ### END SSL ###
+                  </VirtualHost>
+                </IfModule>
+                # set tabstop=4  set shiftwidth=4  set expandtab
+              mode: '000644'
+              owner: root
+              group: root
+            '/root/wp_setup.sql':
+              content: !Sub |
+                CREATE DATABASE IF NOT EXISTS wordpress;
+                GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,ALTER
+                ON wordpress.*
+                TO 'wordpress'@'${Database.Endpoint.Address}'
+                IDENTIFIED BY '${DBPassword}';
+                FLUSH PRIVILEGES;
+              mode: '000500'
+              owner: root
+              group: root
+            '/var/awslogs/etc/aws.conf':
+              content: !Sub |
+                [default]
+                region = ${AWS::Region}
+                [plugins]
+                cwlogs = cwlogs
+              mode: '000644'
+              owner: root
+              group: root
+            '/var/awslogs/etc/awslogs.conf':
+              content: !Sub |
+                [general]
+                state_file = /var/lib/awslogs/agent-state
+                [/var/log/messages]
+                datetime_format = %b %d %H:%M:%S
+                file = /var/log/messages
+                log_stream_name = {instance_id}/var/log/messages
+                log_group_name = ${WebServerLogs}
+                # [/var/log/secure]
+                # datetime_format = %b %d %H:%M:%S
+                # file = /var/log/secure
+                # log_stream_name = {instance_id}/var/log/secure
+                # log_group_name = ${WebServerLogs}
+                # [/var/log/cron]
+                # datetime_format = %b %d %H:%M:%S
+                # file = /var/log/cron
+                # log_stream_name = {instance_id}/var/log/cron
+                # log_group_name = ${WebServerLogs}
+                [/var/log/cloud-init.log]
+                datetime_format = %b %d %H:%M:%S
+                file = /var/log/cloud-init.log
+                log_stream_name = {instance_id}/var/log/cloud-init.log
+                log_group_name = ${WebServerLogs}
+                [/var/log/cfn-init.log]
+                datetime_format = %Y-%m-%d %H:%M:%S
+                file = /var/log/cfn-init.log
+                log_stream_name = {instance_id}/var/log/cfn-init.log
+                log_group_name = ${WebServerLogs}
+                [/var/log/cfn-hup.log]
+                datetime_format = %Y-%m-%d %H:%M:%S
+                file = /var/log/cfn-hup.log
+                log_stream_name = {instance_id}/var/log/cfn-hup.log
+                log_group_name = ${WebServerLogs}
+                [/var/log/cfn-init-cmd.log]
+                datetime_format = %Y-%m-%d %H:%M:%S
+                file = /var/log/cfn-init-cmd.log
+                log_stream_name = {instance_id}/var/log/cfn-init-cmd.log
+                log_group_name = ${WebServerLogs}
+                [/var/log/cloud-init-output.log]
+                file = /var/log/cloud-init-output.log
+                log_stream_name = {instance_id}/var/log/cloud-init-output.log
+                log_group_name = ${WebServerLogs}
+                [/var/log/dmesg]
+                file = /var/log/dmesg
+                log_stream_name = {instance_id}/var/log/dmesg
+                log_group_name = ${WebServerLogs}
+                [/var/log/apache2/htdocs-access.log]
+                datetime_format = %b %d %H:%M:%S %Y
+                file = /var/log/apache2/htdocs-access.log
+                log_stream_name = {instance_id}/var/log/apache2/htdocs-access.log
+                log_group_name = ${WebServerLogs}
+                [/var/log/apache2/htdocs-error.log]
+                datetime_format = %d/%b/%Y:%H:%M:%S %z
+                file = /var/log/apache2/htdocs-error.log
+                log_stream_name = {instance_id}/var/log/apache2/htdocs-error.log
+                log_group_name = ${WebServerLogs}
+              mode: '000644'
+              owner: root
+              group: root
+          commands:
+            01_init:
+              command: '/root/init.sh'
+              cwd: '/root'
+          services:
+            sysvinit:
+              apache2:
+                enabled: true
+                ensureRunning: true
+                files:
+                - '/etc/apache2/apache2.conf'
+                - '/etc/apache2/conf-enabled/wordpress.conf'
+              awslogs:
+                enabled: true
+                ensureRunning: true
+                files:
+                - '/var/awslogs/etc/awslogs.conf'
+                - '/var/awslogs/etc/aws.conf'
+    Properties:
+      AssociatePublicIpAddress: true
+      IamInstanceProfile: !Ref WebServerInstanceProfile
+      ImageId: !FindInMap [AWSRegionArch2AMI, !Ref 'AWS::Region', !FindInMap [AWSInstanceType2Arch, !Ref WebServerInstanceType, Arch ]]
+      InstanceType: !Ref WebServerInstanceType
+      SecurityGroups:
+      - !Ref WebServerSecurityGroup
+      KeyName: !Ref WebServerKeyName
+      UserData:
+        'Fn::Base64': !Sub |
+          #!/bin/bash -x
+          echo "using config version: ${ConfigVersion}"
+          echo deb http://packages.dotdeb.org jessie all >> /etc/apt/sources.list
+          echo deb-src http://packages.dotdeb.org jessie all  >> /etc/apt/sources.list
+          wget https://www.dotdeb.org/dotdeb.gpg
+          apt-key add dotdeb.gpg
+          apt-get -y update
+          apt-get install -y curl
+          apt-get install -y rsync
+          apt-get install -y nfs-common
+          mkdir -p /usr/src/
+          cd /usr/src/
+          wget https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+          tar -xvpf aws-cfn-bootstrap-latest.tar.gz
+          cd aws-cfn-bootstrap-1.4/
+          python setup.py build
+          python setup.py install
+          mkdir -p /var/www/html/
+          cd /var/www/html/
+          mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 $(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone).${EFSFileSystem}.efs.${AWS::Region}.amazonaws.com:/ /var/www/html
+          /usr/local/bin/cfn-init -v --stack ${AWS::StackName} --resource LaunchConfiguration --region ${AWS::Region}
+          /usr/local/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource AutoScalingGroup --region ${AWS::Region}
+          if [ ! -d "/var/www/html/wp-content/" ]
+          then
+            echo wp-content does not exist, copy over fresh install
+            cd ~/wordpress/
+            rsync -avP ~/wordpress/ /var/www/html/
+            cd /var/www/html/
+            chown www-data:www-data /var/www/html/* -R
+            rm /var/www/html/index.html
+          else
+            echo wp-content already exists.
+          fi
+  AutoScalingGroup:
+    Type: 'AWS::AutoScaling::AutoScalingGroup'
+    DependsOn:
+    - EFSMountTarget1
+    - EFSMountTarget2
+    Properties:
+      LoadBalancerNames:
+      - !Ref LoadBalancer
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      MinSize: !Ref MinInstanceCount
+      MaxSize: !Ref MaxInstanceCount
+      DesiredCapacity: !Ref DesiredInstanceCount
+      Cooldown: 60
+      HealthCheckGracePeriod: 120
+      HealthCheckType: EC2
+      VPCZoneIdentifier:
+      - 'Fn::ImportValue': !Sub '${ParentVPCStack}-PublicSubnet1'
+      - 'Fn::ImportValue': !Sub '${ParentVPCStack}-PublicSubnet2'
+      NotificationConfigurations:
+      - TopicARN:
+          !Ref NotificationTopic
+        NotificationTypes:
+        - autoscaling:EC2_INSTANCE_LAUNCH
+        - autoscaling:EC2_INSTANCE_LAUNCH_ERROR
+        - autoscaling:EC2_INSTANCE_TERMINATE
+        - autoscaling:EC2_INSTANCE_TERMINATE_ERROR
+      Tags:
+      - PropagateAtLaunch: true
+        Value: !Ref TagName
+        Key: Name
+      - PropagateAtLaunch: true
+        Value: !Ref TagOwner
+        Key: owner
+      - PropagateAtLaunch: true
+        Value: !Ref TagClient
+        Key: client
+      - PropagateAtLaunch: true
+        Value: !Ref TagProject
+        Key: project
+      - PropagateAtLaunch: true
+        Value: !Ref TagEnvironment
+        Key: environment
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT15M
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MaxBatchSize: 2
+        MinInstancesInService: 1
+        PauseTime: PT15M
+        WaitOnResourceSignals: true
+  ScalingUpPolicy:
+    Type: 'AWS::AutoScaling::ScalingPolicy'
+    Properties:
+      AdjustmentType: PercentChangeInCapacity
+      MinAdjustmentStep: 1
+      AutoScalingGroupName: !Ref AutoScalingGroup
+      Cooldown: 900
+      ScalingAdjustment: 25
+  CPUHighAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      EvaluationPeriods: 5
+      Statistic: Average
+      Threshold: 75
+      AlarmDescription: 'Alarm if CPU load is high.'
+      Period: 60
+      AlarmActions:
+      - !Ref ScalingUpPolicy
+      - !Ref NotificationTopic
+      Namespace: 'AWS/EC2'
+      Dimensions:
+      - Name: AutoScalingGroupName
+        Value: !Ref AutoScalingGroup
+      ComparisonOperator: GreaterThanThreshold
+      MetricName: CPUUtilization
+  ScalingDownPolicy:
+    Type: 'AWS::AutoScaling::ScalingPolicy'
+    Properties:
+      AdjustmentType: PercentChangeInCapacity
+      MinAdjustmentStep: 1
+      AutoScalingGroupName: !Ref AutoScalingGroup
+      Cooldown: 300
+      ScalingAdjustment: -25
+  CPULowAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      EvaluationPeriods: 15
+      Statistic: Average
+      Threshold: 25
+      AlarmDescription: 'Alarm if CPU load is low.'
+      Period: 60
+      AlarmActions:
+      - !Ref ScalingDownPolicy
+      - !Ref NotificationTopic
+      Namespace: 'AWS/EC2'
+      Dimensions:
+      - Name: AutoScalingGroupName
+        Value: !Ref AutoScalingGroup
+      ComparisonOperator: LessThanThreshold
+      MetricName: CPUUtilization
+  EFSFileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      FileSystemTags:
+      - Key: Name
+        Value: !Join [ "", [ !Ref TagName, "-efs"] ]
+      - Key: owner
+        Value: !Ref TagOwner
+      - Key: client
+        Value: !Ref TagClient
+      - Key: project
+        Value: !Ref TagProject
+      - Key: environment
+        Value: !Ref TagEnvironment
+  EFSMountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref EFSFileSystem
+      SubnetId:
+        'Fn::ImportValue': !Sub '${ParentVPCStack}-PublicSubnet1'
+      SecurityGroups:
+      - !Ref MTSecurityGroup
+  EFSMountTarget2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref EFSFileSystem
+      SubnetId:
+        'Fn::ImportValue': !Sub '${ParentVPCStack}-PublicSubnet2'
+      SecurityGroups:
+      - !Ref MTSecurityGroup
+  MTSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allowing access to EFS
+      VpcId:
+        'Fn::ImportValue': !Sub '${ParentVPCStack}-VPC'
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 2049
+        ToPort: 2049
+        SourceSecurityGroupId: !Ref WebServerSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Join [ "", [ !Ref TagName, "-mt-sg"] ]
+        - Key: owner
+          Value: !Ref TagOwner
+        - Key: client
+          Value: !Ref TagClient
+        - Key: project
+          Value: !Ref TagProject
+        - Key: environment
+          Value: !Ref TagEnvironment
+Outputs:
+  LoadBalancerDNS:
+    Description: 'The DNS of the load balancer.'
+    Value: !GetAtt LoadBalancer.DNSName

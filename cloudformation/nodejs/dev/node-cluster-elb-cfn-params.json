@@ -1,0 +1,113 @@
+[{
+        "ParameterKey": "BuildBucket",
+        "ParameterValue": "build-bucket"
+    },
+    {
+        "ParameterKey": "BuildVersion",
+        "ParameterValue": "version"
+    },
+    {
+        "ParameterKey": "ConfigBucket",
+        "ParameterValue": "config-bucket"
+    },
+    {
+        "ParameterKey": "EnvVars",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "DeployPackage",
+        "ParameterValue": "package.tgz"
+    },
+    {
+        "ParameterKey": "DesiredInstanceCount",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "SSLCertificateId",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "InstanceType",
+        "ParameterValue": "t2.small"
+    },
+    {
+        "ParameterKey": "KeyName",
+        "ParameterValue": "key-pair"
+    },
+    {
+        "ParameterKey": "HealthCheckPort",
+        "ParameterValue": "8080"
+    },
+    {
+        "ParameterKey": "HealthCheckPath",
+        "ParameterValue": "/"
+    },
+    {
+        "ParameterKey": "MaxInstanceCount",
+        "ParameterValue": "3"
+    },
+    {
+        "ParameterKey": "MinInstanceCount",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "NodeScriptArgs",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "NodeScriptName",
+        "ParameterValue": "server.js"
+    },
+    {
+        "ParameterKey": "NodeVersion",
+        "ParameterValue": "6.7.0"
+    },
+    {
+        "ParameterKey": "OperatorEmail",
+        "ParameterValue": "name@host.com"
+    },
+    {
+        "ParameterKey": "SSHLocation",
+        "ParameterValue": "x.x.x.x/32"
+    },
+    {
+        "ParameterKey": "SubnetPublic1",
+        "ParameterValue": "subnet-xxx"
+    },
+    {
+        "ParameterKey": "SubnetPublic2",
+        "ParameterValue": "subnet-xxx"
+    },
+    {
+        "ParameterKey": "TagClient",
+        "ParameterValue": "client"
+    },
+    {
+        "ParameterKey": "TagEnvironment",
+        "ParameterValue": "dev"
+    },
+    {
+        "ParameterKey": "TagName",
+        "ParameterValue": "name-dev"
+    },
+    {
+        "ParameterKey": "TagOwner",
+        "ParameterValue": "name@host.com"
+    },
+    {
+        "ParameterKey": "TagProject",
+        "ParameterValue": "project"
+    },
+    {
+        "ParameterKey": "UserDataScript",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "VPCID",
+        "ParameterValue": "vpc-xxx"
+    },
+    {
+        "ParameterKey": "NewRelicKey",
+        "ParameterValue": ""
+    }
+]

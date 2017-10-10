@@ -1,0 +1,101 @@
+[{
+        "ParameterKey": "InstanceType",
+        "ParameterValue": "t2.small"
+    },
+    {
+        "ParameterKey": "KeyName",
+        "ParameterValue": "prometheus-dev"
+    },
+    {
+        "ParameterKey": "OperatorEmail",
+        "ParameterValue": "name@host.com"
+    },
+    {
+        "ParameterKey": "PrometheusUser",
+        "ParameterValue": "prometheus"
+    },
+    {
+        "ParameterKey": "ContainerImage",
+        "ParameterValue": "account.dkr.ecr.us-east-1.amazonaws.com/prometheus:0.01"
+    },
+    {
+        "ParameterKey": "ContainerDesiredCount",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "ContainerPortIn",
+        "ParameterValue": "9090"
+    },
+    {
+        "ParameterKey": "ContainerPortOut",
+        "ParameterValue": "9090"
+    },
+    {
+        "ParameterKey": "ContainerHealthCheckPath",
+        "ParameterValue": "/graph"
+    },
+    {
+        "ParameterKey": "ContainerTargetPathPattern",
+        "ParameterValue": "/*"
+    },
+    {
+        "ParameterKey": "TaskMemory",
+        "ParameterValue": "1024"
+    },
+    {
+        "ParameterKey": "VPCID",
+        "ParameterValue": "vpc-xxx"
+    },
+    {
+        "ParameterKey": "SubnetPublic1",
+        "ParameterValue": "subnet-xxx"
+    },
+    {
+        "ParameterKey": "SubnetPublic2",
+        "ParameterValue": "subnet-xxx"
+    },
+    {
+        "ParameterKey": "AllowIP",
+        "ParameterValue": "x.x.x.x/32"
+    },
+    {
+        "ParameterKey": "LoadBalancerListenPort",
+        "ParameterValue": "80"
+    },
+    {
+        "ParameterKey": "ClusterMaxSize",
+        "ParameterValue": "3"
+    },
+    {
+        "ParameterKey": "ClusterMinSize",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "ClusterDesiredSize",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "SSLCertificateId",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "TagName",
+        "ParameterValue": "prometheus-cw"
+    },
+    {
+        "ParameterKey": "TagOwner",
+        "ParameterValue": "name@host.com"
+    },
+    {
+        "ParameterKey": "TagClient",
+        "ParameterValue": "rga"
+    },
+    {
+        "ParameterKey": "TagProject",
+        "ParameterValue": "prometheus-cw"
+    },
+    {
+        "ParameterKey": "TagEnvironment",
+        "ParameterValue": "dev"
+    }
+]

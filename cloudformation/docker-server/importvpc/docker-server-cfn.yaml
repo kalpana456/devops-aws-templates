@@ -1,0 +1,549 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation template Version 0.1.0. Launch an Amazon Linux EC2
+  instance within a ASG to maintain HA/FT.
+Mappings:
+  AWSInstanceType2Arch:
+    t2.medium:
+      Arch: HVM64
+    t2.micro:
+      Arch: HVM64
+    t2.small:
+      Arch: HVM64
+    t2.large:
+      Arch: HVM64
+  AWSRegionArch2AMI:
+    us-east-1:
+      HVM64: ami-b14ba7a7
+    us-west-1:
+      HVM64: ami-94bdeef4
+    us-west-2:
+      HVM64: ami-221ea342
+    eu-west-1:
+      HVM64: ami-402f1a33
+    eu-central-1:
+      HVM64: ami-5900cc36
+    ap-southeast-1:
+      HVM64: ami-0842e96b
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Import Values
+      Parameters:
+      - ParentVPCStack
+    - Label:
+        default: Instance Settings
+      Parameters:
+      - InstanceType
+      - StorageSize
+      - KeyName
+      - OperatorEmail
+      - ConfigVersion
+    - Label:
+        default: Network Settings
+      Parameters:
+      # - VPCID
+      # - SubnetPublic1
+      # - SubnetPublic2
+      # - AvailabilityZone1
+      # - AvailabilityZone2
+      - SSHLocation
+      - KeyBucket
+      - SiteFQDN
+      - KeyPass
+    - Label:
+        default: Tags
+      Parameters:
+      - TagName
+      - TagOwner
+      - TagClient
+      - TagProject
+      - TagEnvironment
+Parameters:
+  ParentVPCStack:
+    Description: Parent stack to pull VPC and Subnet information from.
+    Type: String
+  # VPCID:
+  #   Default: vpc-id
+  #   Description: VPC ID of the VPC you want to deploy the server in
+  #   Type: AWS::EC2::VPC::Id
+  # AvailabilityZone1:
+  #   Default: a
+  #   Description: One of two Availability Zones that will be used to create subnets
+  #   MaxLength: 1
+  #   MinLength: 1
+  #   Type: String
+  # AvailabilityZone2:
+  #   Default: b
+  #   Description: Two of two Availability Zones that will be used to create subnets.
+  #     Must be different than AvailabilityZone1
+  #   MaxLength: 1
+  #   MinLength: 1
+  #   Type: String
+  # SubnetPublic1:
+  #   Default: subnet-id
+  #   Description: First Public subnet you want to use
+  #   Type: AWS::EC2::Subnet::Id
+  # SubnetPublic2:
+  #   Default: subnet-id
+  #   Description: Second Public subnet you want to use
+  #   Type: AWS::EC2::Subnet::Id
+  InstanceType:
+    AllowedValues:
+    - t2.micro
+    - t2.small
+    - t2.medium
+    - t2.large
+    ConstraintDescription: must be a valid EC2 instance type.
+    Default: t2.small
+    Description: EC2 instance size and type.
+    Type: String
+  StorageSize:
+    Default: 8
+    Description: The size of the EBS storage that will be attached.
+    MaxValue: 200
+    MinValue: 8
+    Type: Number
+  KeyName:
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+    Default: rga-internal
+    Description: The EC2 Key Pair to allow SSH access to the instances
+    Type: AWS::EC2::KeyPair::KeyName
+  OperatorEmail:
+    AllowedPattern: ([a-zA-Z0-9_\-\.]+)@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.)|(([a-zA-Z0-9\-]+\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\]?)
+    ConstraintDescription: must be a valid email address.
+    Default: name@host.com
+    Description: E-Mail address to notify if there are any scaling operations
+    Type: String
+  ConfigVersion:
+    Description: 'The configuration version for this template.'
+    Type: String
+    Default: "0.01"
+  SSHLocation:
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    # Default: x.x.x.x/32
+    Description: The IP address range that can be used to SSH to the EC2 instances
+    MaxLength: 18
+    MinLength: 9
+    Type: String
+  KeyBucket:
+    Default: <key-bucket-name>
+    Description: Main Bucket Name (only) where the deploy keys are installed. you should create the keys/hub path in the bucket.
+    Type: String
+  SiteFQDN:
+    Default: <site-fqdn-url>
+    Description: The full site domain from where it will be accessed.
+    Type: String
+  KeyPass:
+    Description: A password for the ssl cert and keys
+    Type: String
+    MinLength: 4
+    MaxLength: 16
+    NoEcho: true
+  TagClient:
+    Default: rga
+    Description: Tag used for client of the resource
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  TagEnvironment:
+    AllowedValues:
+    - dev
+    - qa
+    - stg
+    - prod
+    - test
+    Default: dev
+    Description: Tag used for environment associated with resource.
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  TagName:
+    Default: tag_name
+    Description: Tag used for Name of the resource
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  TagOwner:
+    Default: name@host.com
+    Description: Tag used for the owner of the resource created (email address).
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  TagProject:
+    Default: tag_project
+    Description: Tag used for project associated with resource.
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  UserDataScript:
+    Default: echo sample init script
+    Description: The custom script that instances will run on boot
+    Type: String
+Resources:
+  AssumeRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+        Version: '2012-10-17'
+      Path: /
+      Policies:
+      - PolicyDocument:
+          Statement:
+          - Action:
+            - ec2:DescribeInstances
+            - ec2:AssociateAddress
+            - cloudformation:DescribeStackResource
+            Effect: Allow
+            Resource: '*'
+          - Action:
+            - s3:*
+            Effect: Allow
+            Resource:
+            - !Join [ "", [ "arn:aws:s3:::", !Ref KeyBucket ] ]
+            - !Join [ "", [ "arn:aws:s3:::", !Ref KeyBucket, "/*"] ]
+          Version: '2012-10-17'
+        PolicyName: DescribeInstances
+    Type: AWS::IAM::Role
+  CPUAlarmHigh:
+    Properties:
+      AlarmActions:
+      - !Ref WebServerScaleUpPolicy
+      AlarmDescription: Scale-up if CPU > 90% for 10 minutes
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+      - Name: AutoScalingGroupName
+        Value:
+          !Ref ServerASG
+      EvaluationPeriods: 2
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Period: 300
+      Statistic: Average
+      Threshold: 90
+    Type: AWS::CloudWatch::Alarm
+  CPUAlarmLow:
+    Properties:
+      AlarmActions:
+      - !Ref WebServerScaleDownPolicy
+      AlarmDescription: Scale-down if CPU < 70% for 10 minutes
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+      - Name: AutoScalingGroupName
+        Value:
+          !Ref ServerASG
+      EvaluationPeriods: 2
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Period: 300
+      Statistic: Average
+      Threshold: 70
+    Type: AWS::CloudWatch::Alarm
+  InstanceSecurityGroup:
+    Properties:
+      GroupDescription: Enable SSH access
+      SecurityGroupEgress:
+      - CidrIp: 0.0.0.0/0
+        FromPort: 0
+        IpProtocol: tcp
+        ToPort: 65535
+      SecurityGroupIngress:
+      - CidrIp:
+          !Ref SSHLocation
+        FromPort: 22
+        IpProtocol: tcp
+        ToPort: 22
+      - CidrIp:
+          !Ref SSHLocation
+        FromPort: 2376
+        IpProtocol: tcp
+        ToPort: 2376
+      Tags:
+      - Key: Name
+        Value:
+          !Ref TagName
+      - Key: client
+        Value:
+          !Ref TagClient
+      - Key: owner
+        Value:
+          !Ref TagOwner
+      - Key: project
+        Value:
+          !Ref TagProject
+      - Key: environment
+        Value:
+          !Ref TagEnvironment
+      VpcId:
+        'Fn::ImportValue': !Sub '${ParentVPCStack}-VPC'
+    Type: AWS::EC2::SecurityGroup
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  LaunchConfig:
+    Metadata:
+      'AWS::CloudFormation::Init':
+        configSets:
+          default:
+            - [docker, keys, init]
+        docker:
+          files:
+            '/root/docker_install.sh':
+              content: !Sub |
+                #!/bin/bash -ex
+                # install docker
+                uname -r
+                apt-get update
+                apt-get install -y curl
+                apt-get install -y apt-transport-https ca-certificates software-properties-common
+                curl -fsSL https://yum.dockerproject.org/gpg | sudo apt-key add -
+                apt-key fingerprint 58118E89F3A912897C070ADBF76221572C52609D
+                add-apt-repository "deb https://apt.dockerproject.org/repo/ debian-$(lsb_release -cs) main"
+                apt-get update
+                apt-get install -y docker-engine
+                apt-cache madison docker-engine
+                docker run hello-world
+              mode: '000500'
+              owner: root
+              group: root
+          commands:
+            01_init:
+              command: '/root/docker_install.sh'
+              cwd: '/root'
+        keys:
+          files:
+            '/root/key_install.sh':
+              content: !Sub |
+                #!/bin/bash -ex
+                # manage server keys
+                #try to copy from s3
+                cd ~/
+                mkdir -p keys/hub && cd keys/hub/
+                aws s3 cp --recursive s3://${KeyBucket}/keys/hub/ . --region ${AWS::Region}
+                if [ ! -f ca-key.pem ]
+                then
+                  # if they do not exist, create new ones
+                  openssl genrsa -aes256 -passout pass:${KeyPass} -out ca-key.pem 4096
+                  openssl req -new -x509 -days 365 -key ca-key.pem -passin pass:${KeyPass} -sha256 -out ca.pem -subj "/C=US/ST=NY/L=New York/O=RGA/CN=${SiteFQDN}"
+                  openssl genrsa -out server-key.pem 4096
+                  openssl req -subj "/CN=${SiteFQDN}" -sha256 -new -key server-key.pem -out server.csr
+                  echo subjectAltName = DNS:${SiteFQDN},IP:${SSHLocation},IP:10.10.10.20,IP:127.0.0.1,IP:0.0.0.0 > extfile.cnf
+                  openssl x509 -req -days 365 -sha256 -in server.csr -CA ca.pem -CAkey ca-key.pem -passin pass:${KeyPass} -CAcreateserial -out server-cert.pem -extfile extfile.cnf
+                  openssl genrsa -out key.pem 4096
+                  openssl req -subj '/CN=client' -new -key key.pem -out client.csr
+                  echo extendedKeyUsage = clientAuth > extfile.cnf
+                  openssl x509 -req -days 365 -sha256 -in client.csr -CA ca.pem -CAkey ca-key.pem  -passin pass:${KeyPass} -CAcreateserial -out cert.pem -extfile extfile.cnf
+                  # copy keys to s3
+                  aws s3 cp --recursive . s3://${KeyBucket}/keys/hub/ --region ${AWS::Region}
+                fi
+                # copy server keys
+                cp ca.pem /etc/docker/
+                cp server-cert.pem /etc/docker/
+                cp server-key.pem /etc/docker/
+                # copy client keys
+                mkdir -p ~/.docker
+                cp ca.pem ~/.docker/
+                cp cert.pem ~/.docker/
+                cp key.pem ~/.docker/
+                cd ~/
+                echo "export DOCKER_TLS_VERIFY=1" >> .bashrc
+                echo "export DOCKER_HOST=0.0.0.0:2376" >> .bashrc
+              mode: '000500'
+              owner: root
+              group: root
+          commands:
+            01_init:
+              command: '/root/key_install.sh'
+              cwd: '/root'
+        init:
+          files:
+            '/etc/systemd/system/multi-user.target.wants/docker-server.service':
+              content: !Sub |
+                [Unit]
+                Description=Docker Application Container Engine
+                Documentation=https://docs.docker.com
+                After=network.target docker.socket
+                Requires=docker.socket
+
+                [Service]
+                Type=notify
+                # the default is not to use systemd for cgroups because the delegate issues still
+                # exists and systemd currently does not support the cgroup feature set required
+                # for containers run by docker
+                ExecStart=/usr/bin/dockerd -H tcp://0.0.0.0:2376 --tlsverify --tlscacert=/etc/docker/ca.pem  --tlscert=/etc/docker/server-cert.pem --tlskey=/etc/docker/server-key.pem
+                ExecReload=/bin/kill -s HUP $MAINPID
+                # Having non-zero Limit*s causes performance problems due to accounting overhead
+                # in the kernel. We recommend using cgroups to do container-local accounting.
+                LimitNOFILE=infinity
+                LimitNPROC=infinity
+                LimitCORE=infinity
+                # Uncomment TasksMax if your systemd version supports it.
+                # Only systemd 226 and above support this version.
+                TasksMax=infinity
+                TimeoutStartSec=0
+                # set delegate yes so that systemd does not reset the cgroups of docker containers
+                Delegate=yes
+                # kill only the docker process, not all processes in the cgroup
+                KillMode=process
+
+                [Install]
+                WantedBy=multi-user.target
+              mode: '000755'
+              owner: root
+              group: root
+            '/root/init.sh':
+              content: !Sub |
+                #!/bin/bash -ex
+                # manage server keys
+                #try to copy from s3
+                cd ~/
+                service docker stop
+                systemctl daemon-reload
+                systemctl start docker-server.service
+              mode: '000500'
+              owner: root
+              group: root
+          commands:
+            01_init:
+              command: '/root/init.sh'
+              cwd: '/root'
+    Properties:
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: !Ref StorageSize
+      AssociatePublicIpAddress: 'true'
+      IamInstanceProfile:
+        !Ref RootInstanceProfile
+      ImageId:
+        Fn::FindInMap:
+        - AWSRegionArch2AMI
+        - !Ref AWS::Region
+        - Fn::FindInMap:
+          - AWSInstanceType2Arch
+          - !Ref InstanceType
+          - Arch
+      InstanceType:
+        !Ref InstanceType
+      KeyName:
+        !Ref KeyName
+      SecurityGroups:
+      - !Ref InstanceSecurityGroup
+      UserData:
+        'Fn::Base64': !Sub |
+          #!/bin/bash -x
+          #Initial profile check
+          echo "using config version: ${ConfigVersion}"
+          source /etc/profile
+          apt-get -y update
+          apt-get install -y curl wget rsync groff python python-dev python-pip
+          pip install --upgrade --user awscli
+          if [ -z "/usr/bin/aws" ]
+          then
+            rm /usr/bin/aws
+          else
+            echo "aws does not exist"
+          fi
+          ln -s ~/.local/bin/aws /usr/bin/aws
+          mkdir -p /usr/src/
+          cd /usr/src/
+          wget https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+          tar -xvpf aws-cfn-bootstrap-latest.tar.gz
+          cd aws-cfn-bootstrap-1.4/
+          python setup.py build
+          python setup.py install
+          /usr/local/bin/cfn-init -v --stack ${AWS::StackName} --resource LaunchConfig --region ${AWS::Region}
+          /usr/local/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource ServerASG --region ${AWS::Region}
+          ELASTIC_IP_ID=${ElasticIP.AllocationId}
+          INSTANCE_ID=`curl -s http://169.254.169.254/latest/meta-data/instance-id`
+          aws ec2 associate-address --instance-id $INSTANCE_ID --allocation-id $ELASTIC_IP_ID --allow-reassociation --region ${AWS::Region}
+          ${UserDataScript}
+    Type: AWS::AutoScaling::LaunchConfiguration
+  NotificationTopic:
+    Properties:
+      Subscription:
+      - Endpoint:
+          !Ref OperatorEmail
+        Protocol: email
+    Type: AWS::SNS::Topic
+  RootInstanceProfile:
+    Properties:
+      Path: /
+      Roles:
+      - !Ref AssumeRole
+    Type: AWS::IAM::InstanceProfile
+  ServerASG:
+    DependsOn: ElasticIP
+    Properties:
+      DesiredCapacity: 1
+      LaunchConfigurationName:
+        !Ref LaunchConfig
+      MaxSize: 3
+      MinSize: 1
+      NotificationConfigurations:
+      - NotificationTypes:
+        - autoscaling:EC2_INSTANCE_LAUNCH
+        - autoscaling:EC2_INSTANCE_LAUNCH_ERROR
+        - autoscaling:EC2_INSTANCE_TERMINATE
+        - autoscaling:EC2_INSTANCE_TERMINATE_ERROR
+        TopicARN:
+          !Ref NotificationTopic
+      Tags:
+      - Key: Name
+        PropagateAtLaunch: 'true'
+        Value:
+          !Ref TagName
+      - Key: client
+        PropagateAtLaunch: 'true'
+        Value:
+          !Ref TagClient
+      - Key: owner
+        PropagateAtLaunch: 'true'
+        Value:
+          !Ref TagOwner
+      - Key: project
+        PropagateAtLaunch: 'true'
+        Value:
+          !Ref TagProject
+      - Key: environment
+        PropagateAtLaunch: 'true'
+        Value:
+          !Ref TagEnvironment
+      VPCZoneIdentifier:
+      - 'Fn::ImportValue': !Sub '${ParentVPCStack}-PublicSubnet1'
+      - 'Fn::ImportValue': !Sub '${ParentVPCStack}-PublicSubnet2'
+    Type: AWS::AutoScaling::AutoScalingGroup
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT10M
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        PauseTime: PT10M
+        MaxBatchSize: 1
+        MinInstancesInService: 1
+        WaitOnResourceSignals: true
+  WebServerScaleDownPolicy:
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName:
+        !Ref ServerASG
+      Cooldown: 60
+      ScalingAdjustment: -1
+    Type: AWS::AutoScaling::ScalingPolicy
+  WebServerScaleUpPolicy:
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName:
+        !Ref ServerASG
+      Cooldown: 60
+      ScalingAdjustment: 1
+    Type: AWS::AutoScaling::ScalingPolicy

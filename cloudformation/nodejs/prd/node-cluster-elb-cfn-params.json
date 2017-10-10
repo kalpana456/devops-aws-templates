@@ -1,0 +1,157 @@
+[{
+        "ParameterKey": "AZPrivate1",
+        "ParameterValue": "a"
+    },
+    {
+        "ParameterKey": "AZPrivate2",
+        "ParameterValue": "b"
+    },
+    {
+        "ParameterKey": "AZPublic1",
+        "ParameterValue": "a"
+    },
+    {
+        "ParameterKey": "AZPublic2",
+        "ParameterValue": "b"
+    },
+    {
+        "ParameterKey": "BuildBucket",
+        "ParameterValue": "bucket/package"
+    },
+    {
+        "ParameterKey": "BuildVersion",
+        "ParameterValue": "version"
+    },
+    {
+        "ParameterKey": "ConfigBucket",
+        "ParameterValue": "bucket/config"
+    },
+    {
+        "ParameterKey": "EnvVars",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "DeployPackage",
+        "ParameterValue": "package.tgz"
+    },
+    {
+        "ParameterKey": "DesiredInstanceCount",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "ScheduledMaxInstanceCount",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "ScheduledMinInstanceCount",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "ScheduledUpRecurrence",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "ScheduledDownRecurrence",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "SSLCertificateId",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "InstanceType",
+        "ParameterValue": "t2.small"
+    },
+    {
+        "ParameterKey": "KeyName",
+        "ParameterValue": "key-pair"
+    },
+    {
+        "ParameterKey": "HealthCheckPort",
+        "ParameterValue": "8080"
+    },
+    {
+        "ParameterKey": "HealthCheckPath",
+        "ParameterValue": "/"
+    },
+    {
+        "ParameterKey": "MaxInstanceCount",
+        "ParameterValue": "3"
+    },
+    {
+        "ParameterKey": "MinInstanceCount",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "NodeScriptArgs",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "NodeScriptName",
+        "ParameterValue": "server.js"
+    },
+    {
+        "ParameterKey": "NodeVersion",
+        "ParameterValue": "6.7.0"
+    },
+    {
+        "ParameterKey": "OperatorEmail",
+        "ParameterValue": "name@host.com"
+    },
+    {
+        "ParameterKey": "SSHLocation",
+        "ParameterValue": "x.x.x.x/32"
+    },
+    {
+        "ParameterKey": "BastionSecurityGroup",
+        "ParameterValue": "sg-<id>"
+    },
+    {
+        "ParameterKey": "SubnetPrivate1",
+        "ParameterValue": "subnet-xxx"
+    },
+    {
+        "ParameterKey": "SubnetPrivate2",
+        "ParameterValue": "subnet-5b02623f"
+    },
+    {
+        "ParameterKey": "SubnetPublic1",
+        "ParameterValue": "subnet-xxx"
+    },
+    {
+        "ParameterKey": "SubnetPublic2",
+        "ParameterValue": "subnet-xxx"
+    },
+    {
+        "ParameterKey": "TagClient",
+        "ParameterValue": "uber"
+    },
+    {
+        "ParameterKey": "TagEnvironment",
+        "ParameterValue": "dev"
+    },
+    {
+        "ParameterKey": "TagName",
+        "ParameterValue": "name-dev"
+    },
+    {
+        "ParameterKey": "TagOwner",
+        "ParameterValue": "name@host.com"
+    },
+    {
+        "ParameterKey": "TagProject",
+        "ParameterValue": "project"
+    },
+    {
+        "ParameterKey": "UserDataScript",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "VPCID",
+        "ParameterValue": "vpc-xxx"
+    },
+    {
+        "ParameterKey": "NewRelicKey",
+        "ParameterValue": ""
+    }
+]

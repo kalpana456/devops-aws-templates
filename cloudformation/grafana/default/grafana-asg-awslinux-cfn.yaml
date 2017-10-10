@@ -1,0 +1,603 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation template Version 0.1.1. Launch one (1) AWS Linux EC2
+  instance within an ASG to maintain HA/FT for a single instance.
+
+Mappings:
+  # If new instance types need to be added, this list would need to be updated.
+  AWSInstanceType2Arch:
+    c3.2xlarge:
+      Arch: HVM64
+    c3.4xlarge:
+      Arch: HVM64
+    c3.8xlarge:
+      Arch: HVM64
+    c3.large:
+      Arch: HVM64
+    c3.xlarge:
+      Arch: HVM64
+    cc2.8xlarge:
+      Arch: HVM64
+    cr1.8xlarge:
+      Arch: HVM64
+    hi1.4xlarge:
+      Arch: HVM64
+    hs1.8xlarge:
+      Arch: HVM64
+    i2.2xlarge:
+      Arch: HVM64
+    i2.4xlarge:
+      Arch: HVM64
+    i2.8xlarge:
+      Arch: HVM64
+    i2.xlarge:
+      Arch: HVM64
+    m3.2xlarge:
+      Arch: HVM64
+    m3.large:
+      Arch: HVM64
+    m3.medium:
+      Arch: HVM64
+    m3.xlarge:
+      Arch: HVM64
+    r3.2xlarge:
+      Arch: HVM64
+    r3.4xlarge:
+      Arch: HVM64
+    r3.8xlarge:
+      Arch: HVM64
+    r3.large:
+      Arch: HVM64
+    r3.xlarge:
+      Arch: HVM64
+    t2.xlarge:
+      Arch: HVM64
+    t2.large:
+      Arch: HVM64
+    t2.medium:
+      Arch: HVM64
+    t2.micro:
+      Arch: HVM64
+    t2.small:
+      Arch: HVM64
+
+  # The AMI's for this template as well as the regions are not all up to date. You can get more details here
+  # and add regions per requirements:
+  # You can find more details here: https://aws.amazon.com/amazon-linux-ami/
+  AWSRegionArch2AMI:
+    us-east-1:
+      HVM64: ami-0b33d91d
+    us-west-1:
+      HVM64: ami-165a0876
+    us-west-2:
+      HVM64: ami-f173cc91
+    ap-southeast-1:
+      HVM64: ami-dc9339bf
+    ap-northeast-1:
+      HVM64: ami-56d4ad31
+
+# This parameter list is used for the AWS Cloudformation GUI, when creating/updating
+# a stack
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Instance Settings
+      Parameters:
+      - InstanceType
+      - KeyName
+      - OperatorEmail
+      - BuildVersion
+      - UserDataScript
+    - Label:
+        default: Network Settings
+      Parameters:
+      - VPCID
+      - SubnetPublic1
+      - SubnetPublic2
+      - AllowIP
+    - Label:
+        default: Grafana Settings
+      Parameters:
+      - GrafanaDomainName
+      - DBUsername
+      - DBPassword
+    - Label:
+        default: Tags
+      Parameters:
+      - TagName
+      - TagOwner
+      - TagClient
+      - TagProject
+      - TagEnvironment
+
+Parameters:
+  InstanceType:
+    AllowedValues:
+    - t2.micro
+    - t2.small
+    - t2.medium
+    - t2.large
+    - t2.xlarge
+    - m3.medium
+    - m3.large
+    - m3.xlarge
+    - m3.2xlarge
+    - c3.large
+    - c3.xlarge
+    - c3.2xlarge
+    - c3.4xlarge
+    - c3.8xlarge
+    - r3.large
+    - r3.xlarge
+    - r3.2xlarge
+    - r3.4xlarge
+    - r3.8xlarge
+    - i2.xlarge
+    - i2.2xlarge
+    - i2.4xlarge
+    - i2.8xlarge
+    - hi1.4xlarge
+    - hs1.8xlarge
+    - cr1.8xlarge
+    - cc2.8xlarge
+    - cg1.4xlarge
+    ConstraintDescription: must be a valid EC2 instance type.
+    Default: t2.small
+    Description: This is the instance size and type. Needs to be in the standard AWS format. Not all the AWS instance types are in the AllowedValues, so that should be updated per requirements.
+    Type: String
+  KeyName:
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+    # Default: ssh-key-pair
+    Description: The Key Pair that will be used to allow SSH into this instance. This Key will need to be created before running this template.
+    Type: AWS::EC2::KeyPair::KeyName
+  OperatorEmail:
+    AllowedPattern: ([a-zA-Z0-9_\-\.]+)@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.)|(([a-zA-Z0-9\-]+\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\]?)
+    ConstraintDescription: must be a valid email address.
+    # Default: name@host.com
+    Description: This email will be used as the default subscription for the SNS Topic, notifying the user of updates/errors for the instance. Additional subscribers can be added post creation.
+    Type: String
+  BuildVersion:
+    Default: <build-version>
+    Description: The build version for this image.
+    Type: String
+  AllowIP:
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    # Default: x.x.x.x/32
+    Description: The IP Range that will be whitelisted on port 22 to allow SSH to the EC2 instances. Set this as your external IP. WARNING - make sure this is a secure IP Range
+    MaxLength: 18
+    MinLength: 9
+    Type: String
+  GrafanaDomainName:
+    Default: <grafana-domain-name>
+    Description: The domain name for the cluster
+    Type: String
+  DBUsername:
+    Description: A username for the Grafana mySql database.
+    Type: String
+    MinLength: 4
+    MaxLength: 16
+    Default: admin
+  DBPassword:
+     Description: A password for the Grafana mySql database.
+     Type: String
+     MinLength: 8
+     MaxLength: 16
+     NoEcho: true
+  VPCID:
+    # Default: vpc-id
+    Description: This is the VPC that the instance will be deployed inside.
+    Type: AWS::EC2::VPC::Id
+  SubnetPublic1:
+    # Default: subnet-id1
+    Description: This is the first public subnet should that be part of the VPC listed above.
+    Type: AWS::EC2::Subnet::Id
+  SubnetPublic2:
+    # Default: subnet-id2
+    Description: This is the second public subnet that should be part of the VPC listed above.
+    Type: AWS::EC2::Subnet::Id
+  TagClient:
+    # Default: client-name
+    Description: Tag used for tracking purposes.
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  TagEnvironment:
+    AllowedValues:
+    - dev
+    - qa
+    - stg
+    - prod
+    - test
+    # Default: dev
+    Description: Tag used for tracking purposes.
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  TagName:
+    # Default: tag-name
+    Description: Tag used for tracking purposes.
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  TagOwner:
+    # Default: name@host.com
+    Description: Tag used for tracking purposes.
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  TagProject:
+    # Default: tag-project
+    Description: Tag used for tracking purposes.
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  UserDataScript:
+    # Default: echo sample init script
+    Description: You can append additional scripting to the UserData which will run on boot. Make sure that commands are seperated by ; or &&
+    Type: String
+
+Outputs:
+  WebsiteURL:
+    Description: IP for newly created Instance
+    Value: !Ref ElasticIP
+
+Resources:
+  AssumeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+        Version: 2012-10-17
+      Path: /
+      Policies:
+      - PolicyDocument:
+          Statement:
+          - Action:
+            - ec2:DescribeInstances
+            - ec2:AssociateAddress
+            - cloudformation:DescribeStackResource
+            Effect: Allow
+            Resource: '*'
+          Version: '2012-10-17'
+        PolicyName: DescribeInstances
+
+  CPUAlarmHigh:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+      - Ref: NotificationTopic
+      # - Ref: WebServerScaleUpPolicy
+      AlarmDescription: Scale-up if CPU > 90% for 5 minutes
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+      - Name: AutoScalingGroupName
+        Value:
+          Ref: ServerASG
+      EvaluationPeriods: 5
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Period: 60
+      Statistic: Average
+      Threshold: 90
+
+  # CPUAlarmLow:
+  #   Type: AWS::CloudWatch::Alarm
+  #   Properties:
+  #     AlarmActions:
+  #     - Ref: NotificationTopic
+  #     - !Ref WebServerScaleDownPolicy
+  #     AlarmDescription: Scale-down if CPU < 70% for 5 minutes
+  #     ComparisonOperator: LessThanThreshold
+  #     Dimensions:
+  #     - Name: AutoScalingGroupName
+  #       Value:
+  #         Ref: ServerASG
+  #     EvaluationPeriods: 5
+  #     MetricName: CPUUtilization
+  #     Namespace: AWS/EC2
+  #     Period: 60
+  #     Statistic: Average
+  #     Threshold: 70
+
+  InstanceSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+          GroupDescription: Enable SSH access
+          VpcId: !Ref VPCID
+          SecurityGroupEgress:
+          - CidrIp: 0.0.0.0/0
+            FromPort: 0
+            IpProtocol: tcp
+            ToPort: 65535
+          SecurityGroupIngress:
+          - CidrIp: !Ref AllowIP
+            FromPort: 22
+            IpProtocol: tcp
+            ToPort: 22
+          - CidrIp: !Ref AllowIP
+            FromPort: 3000
+            IpProtocol: tcp
+            ToPort: 3000
+          Tags:
+              - Key: Name
+                Value: !Sub ${TagName}-asg-sg
+              - Key: owner
+                Value: !Ref TagOwner
+              - Key: client
+                Value: !Ref TagClient
+              - Key: project
+                Value: !Ref TagProject
+              - Key: environment
+                Value: !Ref TagEnvironment
+
+  # This security group defines access to the mySQL database
+  DatabaseSecurityGroup:
+      Type: 'AWS::EC2::SecurityGroup'
+      Properties:
+          GroupDescription: Access to the Database from the host instances
+          VpcId: !Ref VPCID
+          SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: 3306
+            ToPort: 3306
+            SourceSecurityGroupId: !Ref InstanceSecurityGroup
+          - CidrIp: !Ref AllowIP
+            FromPort: 3306
+            ToPort: 3306
+            IpProtocol: tcp
+          Tags:
+            - Key: Name
+              Value: !Sub ${TagName}-db-sg
+            - Key: owner
+              Value: !Ref TagOwner
+            - Key: client
+              Value: !Ref TagClient
+            - Key: project
+              Value: !Ref TagProject
+            - Key: environment
+              Value: !Ref TagEnvironment
+
+  # The subnet groups that will have access to the mySQL db
+  DBSubnetGroup:
+      Type: AWS::RDS::DBSubnetGroup
+      Properties:
+        DBSubnetGroupDescription: Grafana DB subnet group
+        SubnetIds:
+        - !Ref SubnetPublic1
+        - !Ref SubnetPublic2
+
+  # The mySQL database that will be used by Grafana
+  GrafanaDB:
+      Type: AWS::RDS::DBInstance
+      Properties:
+        AllocatedStorage: 5
+        BackupRetentionPeriod: 1
+        DBInstanceClass: db.t2.small
+        DBName: grafana
+        Engine: MySQL
+        MasterUsername:
+          !Ref DBUsername
+        MasterUserPassword:
+          !Ref DBPassword
+        VPCSecurityGroups:
+        - !Ref DatabaseSecurityGroup
+        DBSubnetGroupName: !Ref DBSubnetGroup
+        MultiAZ: true
+        StorageType: gp2
+        Tags:
+          - Key: Name
+            Value: !Sub ${TagName}-db
+          - Key: owner
+            Value: !Ref TagOwner
+          - Key: client
+            Value: !Ref TagClient
+          - Key: project
+            Value: !Ref TagProject
+          - Key: environment
+            Value: !Ref TagEnvironment
+
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  LaunchConfig:
+    DependsOn:
+    - GrafanaDB
+    - ElasticIP
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Metadata:
+      'AWS::CloudFormation::Init':
+        configSets:
+          default:
+            [setup, grafana-install]
+        setup:
+          packages:
+            yum:
+              emacs: []
+              screen: []
+          files:
+            '/etc/cron.daily/yumupdate':
+              content: !Sub |
+                #!/bin/bash -xe
+                YUM=/usr/bin/yum
+                # -y == assume yes
+                # -d == debug verbosity
+                # -e == error-reporting level
+                # -R == wait 0~n min before running the command (randomise)
+                # clear all packages, dependency headers, metadata and metadata cache
+                $YUM -y -d 0 -e 0 clean all
+                # update the yum package itself
+                $YUM -y -d 0 -e 0 update yum
+                # update everything
+                $YUM -y -R 10 -e 0 -d 0 update --security
+                #IF YOU JUST WANT TO INSTALL SECURITY UPDATES ADD —security
+                yum -y update --security
+              mode: '000500'
+              owner: root
+              group: root
+        grafana-install:
+          files:
+            '/etc/yum.repos.d/grafana.repo':
+              content: !Sub |
+                [grafana]
+                name=grafana
+                baseurl=https://packagecloud.io/grafana/stable/el/6/$basearch
+                repo_gpgcheck=1
+                enabled=1
+                gpgcheck=1
+                gpgkey=https://packagecloud.io/gpg.key https://grafanarel.s3.amazonaws.com/RPM-GPG-KEY-grafana
+                sslverify=1
+                sslcacert=/etc/pki/tls/certs/ca-bundle.crt
+              mode: '000500'
+              owner: root
+              group: root
+            '/root/grafanaenv':
+              content: !Sub |
+                GF_DEFAULT_INSTANCE_NAME=${GrafanaDomainName}
+                GF_DATABASE_TYPE=mysql
+                GF_DATABASE_HOST=${GrafanaDB.Endpoint.Address}:${GrafanaDB.Endpoint.Port}
+                GF_DATABASE_NAME=grafana
+                GF_DATABASE_USER=${DBUsername}
+                GF_DATABASE_PASSWORD=${DBPassword}
+              mode: '000500'
+              owner: root
+              group: root
+            '/root/grafana-install.sh':
+              content: !Sub |
+                #!/bin/bash -xe
+                echo // running grafana-install ...
+                yum update -y && yum install -y grafana
+                source /root/grafanaenv
+                service grafana-server start
+                echo // grafana-install done
+              mode: '000500'
+              owner: root
+              group: root
+          commands:
+            01_init:
+              command: '/root/grafana-install.sh'
+              cwd: '/root'
+    Properties:
+      AssociatePublicIpAddress: true
+      IamInstanceProfile:
+        Ref: RootInstanceProfile
+      ImageId:
+        Fn::FindInMap:
+        - AWSRegionArch2AMI
+        - Ref: AWS::Region
+        - Fn::FindInMap:
+          - AWSInstanceType2Arch
+          - Ref: InstanceType
+          - Arch
+      InstanceType:
+        Ref: InstanceType
+      KeyName:
+        Ref: KeyName
+      SecurityGroups:
+      - Ref: InstanceSecurityGroup
+      UserData:
+        "Fn::Base64": !Sub |
+            #!/bin/bash
+            echo building version ${BuildVersion} ...
+            yum update -y
+            #Initial profile check
+            source /etc/profile
+            # Install the files and packages from the metadata
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource LaunchConfig --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource ServerASG --region ${AWS::Region}
+            ELASTIC_IP=${ElasticIP}
+            ELASTIC_IP_ID=${ElasticIP.AllocationId}
+            INSTANCE_ID=`curl -s http://169.254.169.254/latest/meta-data/instance-id`
+            aws ec2 associate-address --instance-id $INSTANCE_ID --allocation-id $ELASTIC_IP_ID --allow-reassociation --region ${AWS::Region}
+            ${UserDataScript}
+
+  NotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+      - Endpoint:
+          Ref: OperatorEmail
+        Protocol: email
+
+  RootInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+      - Ref: AssumeRole
+
+  ServerASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      DesiredCapacity: 1
+      LaunchConfigurationName:
+        Ref: LaunchConfig
+      MaxSize: 2
+      MinSize: 1
+      NotificationConfigurations:
+      - NotificationTypes:
+        - autoscaling:EC2_INSTANCE_LAUNCH
+        - autoscaling:EC2_INSTANCE_LAUNCH_ERROR
+        - autoscaling:EC2_INSTANCE_TERMINATE
+        - autoscaling:EC2_INSTANCE_TERMINATE_ERROR
+        TopicARN:
+          Ref: NotificationTopic
+      Tags:
+      - Key: Name
+        PropagateAtLaunch: 'true'
+        Value:
+          Ref: TagName
+      - Key: client
+        PropagateAtLaunch: 'true'
+        Value:
+          Ref: TagClient
+      - Key: owner
+        PropagateAtLaunch: 'true'
+        Value:
+          Ref: TagOwner
+      - Key: project
+        PropagateAtLaunch: 'true'
+        Value:
+          Ref: TagProject
+      - Key: environment
+        PropagateAtLaunch: 'true'
+        Value:
+          Ref: TagEnvironment
+      VPCZoneIdentifier:
+      - Ref: SubnetPublic1
+      - Ref: SubnetPublic2
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT10M
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MaxBatchSize: 1
+        MinInstancesInService: 1
+        PauseTime: PT10M
+        WaitOnResourceSignals: true
+
+  # WebServerScaleDownPolicy:
+  #   Type: AWS::AutoScaling::ScalingPolicy
+  #   Properties:
+  #     AdjustmentType: ChangeInCapacity
+  #     AutoScalingGroupName:
+  #       Ref: ServerASG
+  #     Cooldown: 60
+  #     ScalingAdjustment: -1
+
+  # WebServerScaleUpPolicy:
+  #   Type: AWS::AutoScaling::ScalingPolicy
+  #   Properties:
+  #     AdjustmentType: ChangeInCapacity
+  #     AutoScalingGroupName:
+  #       Ref: ServerASG
+  #     Cooldown: 60
+  #     ScalingAdjustment: 1

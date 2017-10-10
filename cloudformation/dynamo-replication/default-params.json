@@ -1,0 +1,109 @@
+[{
+        "ParameterKey": "InstanceType",
+        "ParameterValue": "t2.small"
+    },
+    {
+        "ParameterKey": "KeyName",
+        "ParameterValue": "dynamo-replica-dev"
+    },
+    {
+        "ParameterKey": "OperatorEmail",
+        "ParameterValue": "name@host.com"
+    },
+    {
+        "ParameterKey": "ContainerImage",
+        "ParameterValue": "256696148962.dkr.ecr.us-east-1.amazonaws.com/dynamo-replica-proc:0.01"
+    },
+    {
+        "ParameterKey": "BuildVersion",
+        "ParameterValue": "0.01"
+    },
+    {
+        "ParameterKey": "BuildDate",
+        "ParameterValue": "20170423231934"
+    },
+    {
+        "ParameterKey": "ContainerMaxCount",
+        "ParameterValue": "3"
+    },
+    {
+        "ParameterKey": "ContainerMinCount",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "ContainerDesiredCount",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "TaskMemory",
+        "ParameterValue": "512"
+    },
+    {
+        "ParameterKey": "VPCID",
+        "ParameterValue": "vpc-xxx"
+    },
+    {
+        "ParameterKey": "SubnetPublic1",
+        "ParameterValue": "subnet-xxx"
+    },
+    {
+        "ParameterKey": "SubnetPublic2",
+        "ParameterValue": "subnet-xxx"
+    },
+    {
+        "ParameterKey": "AllowIP",
+        "ParameterValue": "x.x.x.x/32"
+    },
+    {
+        "ParameterKey": "ClusterMaxSize",
+        "ParameterValue": "3"
+    },
+    {
+        "ParameterKey": "ClusterMinSize",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "ClusterDesiredSize",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "EnvJavaOpts",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "EnvSourceTable",
+        "ParameterValue": "testcsvimp"
+    },
+    {
+        "ParameterKey": "EnvSourceRegion",
+        "ParameterValue": "ap-northeast-1"
+    },
+    {
+        "ParameterKey": "EnvTargetTable",
+        "ParameterValue": "testcsvimp"
+    },
+    {
+        "ParameterKey": "EnvTargetRegion",
+        "ParameterValue": "us-east-1"
+    },
+    {
+        "ParameterKey": "TagName",
+        "ParameterValue": "dap-repl-ap-us-dev"
+    },
+    {
+        "ParameterKey": "TagOwner",
+        "ParameterValue": "name@host.com"
+    },
+    {
+        "ParameterKey": "TagClient",
+        "ParameterValue": "jnj"
+    },
+    {
+        "ParameterKey": "TagProject",
+        "ParameterValue": "dap"
+    },
+    {
+        "ParameterKey": "TagEnvironment",
+        "ParameterValue": "dev"
+    }
+]

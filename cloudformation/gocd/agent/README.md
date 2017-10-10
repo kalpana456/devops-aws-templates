@@ -15,7 +15,7 @@ aws cloudformation create-stack \
 --stack-name gocd-agent-$(date +%Y%m%d%H%M%S) \
 --template-body file://$(pwd | tr -d '\n')/gocd-agent-cfn.yaml \
 --capabilities CAPABILITY_NAMED_IAM \
---tags Key=Name,Value=gocd-agent Key=owner,Value=nauman.hafiz@rga.com Key=environment,Value=${ENV} Key=project,Value=connectedwork Key=client,Value=rga \
+--tags Key=Name,Value=gocd-agent Key=owner,Value=name@host.com Key=environment,Value=${ENV} Key=project,Value=connectedwork Key=client,Value=rga \
 --parameters file://$(pwd | tr -d '\n')/default-params.json \
 --region ${AWS_REGION} \
 --profile ${AWS_PROFILE}

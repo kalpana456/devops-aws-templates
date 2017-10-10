@@ -1,0 +1,105 @@
+[{
+        "ParameterKey": "InstanceType",
+        "ParameterValue": "t2.large"
+    },
+    {
+        "ParameterKey": "KeyName",
+        "ParameterValue": "prometheus-prd"
+    },
+    {
+        "ParameterKey": "OperatorEmail",
+        "ParameterValue": "name@host.com"
+    },
+    {
+        "ParameterKey": "ContainerImage",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "ContainerDesiredCount",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "ContainerPortIn",
+        "ParameterValue": "9090"
+    },
+    {
+        "ParameterKey": "ContainerPortOut",
+        "ParameterValue": "9090"
+    },
+    {
+        "ParameterKey": "ContainerHealthCheckPath",
+        "ParameterValue": "/graph"
+    },
+    {
+        "ParameterKey": "ContainerTargetPathPattern",
+        "ParameterValue": "/*"
+    },
+    {
+        "ParameterKey": "TaskMemory",
+        "ParameterValue": "128"
+    },
+    {
+        "ParameterKey": "VPCID",
+        "ParameterValue": "vpc-xxx"
+    },
+    {
+        "ParameterKey": "SubnetPublic1",
+        "ParameterValue": "subnet-xxx"
+    },
+    {
+        "ParameterKey": "SubnetPublic2",
+        "ParameterValue": "subnet-xxx"
+    },
+    {
+        "ParameterKey": "AZPublic1",
+        "ParameterValue": "a"
+    },
+    {
+        "ParameterKey": "AZPublic2",
+        "ParameterValue": "c"
+    },
+    {
+        "ParameterKey": "AllowIP",
+        "ParameterValue": "x.x.x.x/32"
+    },
+    {
+        "ParameterKey": "LoadBalancerListenPort",
+        "ParameterValue": "80"
+    },
+    {
+        "ParameterKey": "ClusterMaxSize",
+        "ParameterValue": "3"
+    },
+    {
+        "ParameterKey": "ClusterMinSize",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "ClusterDesiredSize",
+        "ParameterValue": "1"
+    },
+    {
+        "ParameterKey": "SSLCertificateId",
+        "ParameterValue": ""
+    },
+    {
+        "ParameterKey": "TagName",
+        "ParameterValue": "prometheus-prd"
+    },
+    {
+        "ParameterKey": "TagOwner",
+        "ParameterValue": "name@host.com"
+    },
+    {
+        "ParameterKey": "TagClient",
+        "ParameterValue": "rga"
+    },
+    {
+        "ParameterKey": "TagProject",
+        "ParameterValue": "prometheus-prd"
+    },
+    {
+        "ParameterKey": "TagEnvironment",
+        "ParameterValue": "prd"
+    }
+]

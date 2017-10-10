@@ -1,5 +1,4 @@
-[
-    {
+[{
         "ParameterValue": "x.x.x.x/32",
         "ParameterKey": "AllowSSHFrom"
     },
@@ -44,7 +43,7 @@
         "ParameterKey": "EC2KeyPair"
     },
     {
-        "ParameterValue": "nauman.hafiz@rga.com",
+        "ParameterValue": "name@host.com",
         "ParameterKey": "OperatorEmail"
     },
     {

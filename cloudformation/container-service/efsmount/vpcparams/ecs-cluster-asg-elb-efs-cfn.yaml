@@ -1,0 +1,976 @@
+---
+Description: >
+    This template sets up an ECS cluster running a docker container as a service.
+Mappings:
+
+    # You can find the latest available on this page of our documentation:
+    # http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-optimized_AMI.html
+    # (note the AMI identifier is region specific)
+
+    AWSRegionToAMI:
+        us-east-1:
+            AMI: ami-275ffe31
+        us-east-2:
+            AMI: ami-62745007
+        us-west-1:
+            AMI: ami-689bc208
+        us-west-2:
+            AMI: ami-62d35c02
+        eu-west-1:
+            AMI: ami-95f8d2f3
+        eu-west-2:
+            AMI: ami-bf9481db
+        eu-central-1:
+            AMI: ami-085e8a67
+        ap-northeast-1:
+            AMI: ami-f63f6f91
+        ap-southeast-1:
+            AMI: ami-b4ae1dd7
+        ap-southeast-2:
+            AMI: ami-fbe9eb98
+        ca-central-1:
+            AMI: ami-ee58e58a
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Instance Settings
+      Parameters:
+      - InstanceType
+      - KeyName
+      - OperatorEmail
+    - Label:
+        default: Container Settings
+      Parameters:
+      - ContainerImage
+      - BuildVersion
+      - BuildDate
+      - ContainerMaxCount
+      - ContainerMinCount
+      - ContainerDesiredCount
+      - ContainerPortIn
+      - ContainerPortOut
+      - ContainerHealthCheckPath
+      - ContainerTargetPathPattern
+      - MountContainerPath
+      - VolumeSourcePathKey
+      - TaskMemory
+    - Label:
+        default: Network Settings
+      Parameters:
+      - VPCID
+      - SubnetPublic1
+      - SubnetPublic2
+      # - SubnetPrivate1
+      # - SubnetPrivate2
+      - AllowIP
+      # - BastionSecurityGroup
+    - Label:
+        default: ELB and ASG Settings
+      Parameters:
+      - LoadBalancerListenPort
+      - ClusterMaxSize
+      - ClusterMinSize
+      - ClusterDesiredSize
+      - DeregistrationDelay
+      # - ScheduledMaxInstanceCount
+      # - ScheduledMinInstanceCount
+      # - ScheduledUpRecurrence
+      # - ScheduledDownRecurrence
+      - SSLCertificateId
+    - Label:
+        default: Tags
+      Parameters:
+      - TagName
+      - TagOwner
+      - TagClient
+      - TagProject
+      - TagEnvironment
+Parameters:
+  InstanceType:
+    AllowedValues:
+    - t2.micro
+    - t2.small
+    - t2.medium
+    - t2.large
+    - t2.xlarge
+    - m4.large
+    - m4.xlarge
+    - m4.2xlarge
+    ConstraintDescription: must be a valid EC2 instance type.
+    Default: t2.small
+    Description: WebServer EC2 instance type
+    Type: String
+  KeyName:
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+    Default: <key-pair>
+    Description: The EC2 Key Pair to allow SSH access to the instances
+    Type: AWS::EC2::KeyPair::KeyName
+  OperatorEmail:
+    AllowedPattern: ([a-zA-Z0-9_\-\.]+)@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.)|(([a-zA-Z0-9\-]+\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\]?)
+    ConstraintDescription: must be a valid email address.
+    Default: your.name@rga.com
+    Description: E-Mail address to notify if there are any scaling operations
+    Type: String
+  ContainerImage:
+    Default: <container-image>
+    Description: Name of the container image that should run on this cluster.
+    Type: String
+  BuildVersion:
+    Default: <build-version>
+    Description: The build version for this image.
+    Type: String
+  BuildDate:
+    Default: <build-date>
+    Description: The build date for this image.
+    Type: String
+  ContainerMaxCount:
+    Default: <container-max-count>
+    Description: Max number of container instances.
+    Type: String
+  ContainerMinCount:
+    Default: <container-min-count>
+    Description: Min number of container instances.
+    Type: String
+  ContainerDesiredCount:
+    Default: <container-desired-count>
+    Description: Desired number of container instances.
+    Type: String
+  ContainerPortIn:
+    Default: <container-port-in>
+    Description: Container internal port
+    Type: String
+  ContainerPortOut:
+    Default: <container-port-out>
+    Description: Container external port
+    Type: String
+  ContainerHealthCheckPath:
+    Default: <container-healthcheck-path>
+    Description: The path at which container will be accessed
+    Type: String
+  ContainerTargetPathPattern:
+    Default: /*
+    Description: The path pattern matching requests that will be forwarded
+    Type: String
+  MountContainerPath:
+    Default: <mount-container-path>
+    Description: The path in the container where efs should be mounted (ex. /var/lib/grafana)
+    Type: String
+  VolumeSourcePathKey:
+    Default: <volume-source-path>
+    Description: The path key on the instance where efs will be mounted (ex. prometheus); should not contain slash (/)
+    Type: String
+  TaskMemory:
+    Default: 128
+    Description: The amount of memory to allocate to the task
+    Type: Number
+  VPCID:
+    Default: vpc-<id>
+    Description: VPC ID of the VPC you want to deploy the server in
+    Type: AWS::EC2::VPC::Id
+  SubnetPublic1:
+    Default: subnet-<id>
+    Description: First Public subnet you want to use
+    Type: AWS::EC2::Subnet::Id
+  SubnetPublic2:
+    Default: subnet-<id>
+    Description: Second Public subnet you want to use
+    Type: AWS::EC2::Subnet::Id
+  # SubnetPrivate1:
+  #   Default: subnet-<id>
+  #   Description: First Public subnet you want to use
+  #   Type: AWS::EC2::Subnet::Id
+  # SubnetPrivate2:
+  #   Default: subnet-<id>
+  #   Description: Second Public subnet you want to use
+  #   Type: AWS::EC2::Subnet::Id
+  AllowIP:
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    # Default: x.x.x.x/32
+    Description: The IP address range that can be used to SSH to the EC2 instances
+    MaxLength: 18
+    MinLength: 9
+    Type: String
+  # BastionSecurityGroup:
+  #   Default: sg-<id>
+  #   Description: First Public subnet you want to use
+  #   Type: AWS::EC2::SecurityGroup::Id
+  LoadBalancerListenPort:
+    Default: 80
+    Description: The port at which the load balancer is listening
+    Type: Number
+  ClusterMaxSize:
+    Default: 3
+    Description: The maximum no of instances the ASG allows
+    Type: Number
+  ClusterMinSize:
+    Default: 1
+    Description: The minimum no of instances the ASG allows
+    Type: Number
+  ClusterDesiredSize:
+    Default: 1
+    Description: The minimum no of instances the ASG allows
+    Type: Number
+  DeregistrationDelay:
+    Default: 0
+    Description: The time to wait while deregistering a target from the load balancer
+    Type: Number
+  # ScheduledMaxInstanceCount:
+  #   Default: 30
+  #   Description: The maximum no of instances the ASG allows
+  #   Type: Number
+  # ScheduledMinInstanceCount:
+  #   Default: 15
+  #   Description: The minimum no of instances the ASG allows
+  #   Type: Number
+  # ScheduledUpRecurrence:
+  #   Default: "0 23 * * *"
+  #   Description: The version of node to run on the instance.
+  #   Type: String
+  # ScheduledDownRecurrence:
+  #   Default: "0 16 * * *"
+  #   Description: The version of node to run on the instance.
+  #   Type: String
+  SSLCertificateId:
+    Default: <ssl-cert-id>
+    Description: Name of the SSL cert that will be used by the Load Balancer
+    Type: String
+  TagName:
+    Default: <tag-name>
+    Description: Tag used for Name of the resource
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  TagOwner:
+    Default: <tag-owner>
+    Description: Tag used for the owner of the resource created (email address).
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  TagClient:
+    Default: <tag-client>
+    Description: Tag used for client of the resource
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  TagProject:
+    Default: <tag-project>
+    Description: Tag used for project associated with resource.
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  TagEnvironment:
+    AllowedValues:
+    - dev
+    - qa
+    - stg
+    - prd
+    - test
+    Default: dev
+    Description: Tag used for environment associated with resource.
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+
+Conditions:
+  AddSSLIntegration: !Not [!Equals [!Ref SSLCertificateId, '']]
+
+Resources:
+    # Security Groups
+    # This security group defines who/where is allowed to access the ECS hosts directly.
+    # By default we're just allowing access from the load balancer.  If you want to SSH
+    # into the hosts, or expose non-load balanced services you can open their ports here.
+    ECSHostSecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+            VpcId: !Ref VPCID
+            GroupDescription: Access to the ECS hosts and the tasks/containers that run on them
+            SecurityGroupIngress:
+                # Only allow inbound access to ECS from the ELB
+                - IpProtocol: -1
+                  SourceSecurityGroupId:
+                    !Ref LoadBalancerSecurityGroup
+                - CidrIp:
+                    !Ref AllowIP
+                  FromPort: 22
+                  IpProtocol: tcp
+                  ToPort: 22
+            Tags:
+                - Key: Name
+                  Value: !Sub ${TagName}-ecs-host-sg
+                - Key: client
+                  Value: !Ref TagClient
+                - Key: owner
+                  Value: !Ref TagOwner
+                - Key: project
+                  Value: !Ref TagProject
+                - Key: environment
+                  Value: !Ref TagEnvironment
+
+    # This security group defines who/where is allowed to access the Application Load Balancer.
+    # By default, we've opened this up to the public internet (0.0.0.0/0) but can you restrict
+    # it further if you want.
+    LoadBalancerSecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+            VpcId: !Ref VPCID
+            GroupDescription: Access to the load balancer that sits in front of ECS
+            SecurityGroupIngress:
+                # Allow access from anywhere to our ECS services
+                - CidrIp:
+                    !Ref AllowIP
+                  FromPort: !Ref LoadBalancerListenPort
+                  IpProtocol: tcp
+                  ToPort: !Ref LoadBalancerListenPort
+            Tags:
+                - Key: Name
+                  Value: !Sub ${TagName}-alb-sg
+                - Key: client
+                  Value: !Ref TagClient
+                - Key: owner
+                  Value: !Ref TagOwner
+                - Key: project
+                  Value: !Ref TagProject
+                - Key: environment
+                  Value: !Ref TagEnvironment
+
+    SSLLoadBalancerSGIngress:
+        Type: AWS::EC2::SecurityGroupIngress
+        Condition: AddSSLIntegration
+        Properties:
+            CidrIp: !Ref AllowIP
+            FromPort: 443
+            GroupId: !Ref LoadBalancerSecurityGroup
+            IpProtocol: tcp
+            ToPort: 443
+
+    # This security group defines access to EFS mount
+    MountTargetSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        VpcId: !Ref VPCID
+        GroupDescription: Security group for mount target
+        SecurityGroupIngress:
+          - FromPort: 2049
+            SourceSecurityGroupId:
+              !Ref ECSHostSecurityGroup
+            IpProtocol: tcp
+            ToPort: 2049
+        Tags:
+          - Key: Name
+            Value: !Sub ${TagName}-mt-sg
+          - Key: client
+            Value: !Ref TagClient
+          - Key: owner
+            Value: !Ref TagOwner
+          - Key: project
+            Value: !Ref TagProject
+          - Key: environment
+            Value: !Ref TagEnvironment
+
+    # The EFS File System and Mounts
+    FileSystem:
+      Type: AWS::EFS::FileSystem
+      Properties:
+        FileSystemTags:
+        - Key: Name
+          Value:
+            !Sub ${TagName}-efs
+
+    MountTarget1:
+      DependsOn: FileSystem
+      Type: AWS::EFS::MountTarget
+      Properties:
+        FileSystemId:
+          !Ref FileSystem
+        SecurityGroups:
+        - !Ref MountTargetSecurityGroup
+        SubnetId:
+          !Ref SubnetPublic1
+
+    MountTarget2:
+      DependsOn: FileSystem
+      Type: AWS::EFS::MountTarget
+      Properties:
+        FileSystemId:
+          !Ref FileSystem
+        SecurityGroups:
+        - !Ref MountTargetSecurityGroup
+        SubnetId:
+          !Ref SubnetPublic2
+
+    # Application Load Balancer
+    LoadBalancer:
+        Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+        Properties:
+            Name: !Ref TagName
+            Subnets:
+            - !Ref SubnetPublic1
+            - !Ref SubnetPublic2
+            LoadBalancerAttributes:
+            - Key: idle_timeout.timeout_seconds
+              Value: '120'
+            SecurityGroups:
+                - !Ref LoadBalancerSecurityGroup
+            Tags:
+                - Key: Name
+                  Value: !Sub ${TagName}-alb
+                - Key: client
+                  Value: !Ref TagClient
+                - Key: owner
+                  Value: !Ref TagOwner
+                - Key: project
+                  Value: !Ref TagProject
+                - Key: environment
+                  Value: !Ref TagEnvironment
+
+    LoadBalancerListener:
+        Type: AWS::ElasticLoadBalancingV2::Listener
+        Properties:
+            LoadBalancerArn: !Ref LoadBalancer
+            Port: !Ref LoadBalancerListenPort
+            Protocol: HTTP
+            DefaultActions:
+                - Type: forward
+                  TargetGroupArn: !Ref DefaultTargetGroup
+
+    SSLLoadBalancerListener:
+        Type: AWS::ElasticLoadBalancingV2::Listener
+        Condition: AddSSLIntegration
+        Properties:
+            LoadBalancerArn: !Ref LoadBalancer
+            Port: 443
+            Protocol: HTTPS
+            Certificates:
+              - CertificateArn: !Ref SSLCertificateId
+            DefaultActions:
+                - Type: forward
+                  TargetGroupArn: !Ref DefaultTargetGroup
+
+    # We define a default target group here, as this is a mandatory Parameters
+    # when creating an Application Load Balancer Listener. This is not used, instead
+    # a target group is created per-service in each service template (../services/*)
+    DefaultTargetGroup:
+        Type: AWS::ElasticLoadBalancingV2::TargetGroup
+        Properties:
+            VpcId: !Ref VPCID
+            Port: !Ref ContainerPortOut
+            Protocol: HTTP
+            Tags:
+              - Key: Name
+                Value: !Sub ${TagName}-default-tg
+              - Key: client
+                Value: !Ref TagClient
+              - Key: owner
+                Value: !Ref TagOwner
+              - Key: project
+                Value: !Ref TagProject
+              - Key: environment
+                Value: !Ref TagEnvironment
+
+    # ECS Cluster
+    ECSCluster:
+        Type: AWS::ECS::Cluster
+        Properties:
+            ClusterName: !Ref TagName
+
+    ECSAutoScalingGroup:
+        DependsOn: FileSystem
+        Type: AWS::AutoScaling::AutoScalingGroup
+        Properties:
+            VPCZoneIdentifier:
+            - !Ref SubnetPublic1
+            - !Ref SubnetPublic2
+            LaunchConfigurationName: !Ref ECSLaunchConfiguration
+            MetricsCollection:
+            - Granularity: 1Minute
+            MinSize: !Ref ClusterMinSize
+            MaxSize: !Ref ClusterMaxSize
+            DesiredCapacity: !Ref ClusterDesiredSize
+            NotificationConfigurations:
+            - NotificationTypes:
+              - autoscaling:EC2_INSTANCE_LAUNCH
+              - autoscaling:EC2_INSTANCE_TERMINATE
+              - autoscaling:EC2_INSTANCE_LAUNCH_ERROR
+              - autoscaling:EC2_INSTANCE_TERMINATE_ERROR
+              TopicARN:
+                !Ref NotificationTopic
+            Tags:
+                - Key: Name
+                  Value: !Sub ${TagName}-asg
+                  PropagateAtLaunch: true
+                - Key: client
+                  Value: !Ref TagClient
+                  PropagateAtLaunch: true
+                - Key: owner
+                  Value: !Ref TagOwner
+                  PropagateAtLaunch: true
+                - Key: project
+                  Value: !Ref TagProject
+                  PropagateAtLaunch: true
+                - Key: environment
+                  Value: !Ref TagEnvironment
+                  PropagateAtLaunch: true
+        CreationPolicy:
+            ResourceSignal:
+                Timeout: PT15M
+        UpdatePolicy:
+            AutoScalingRollingUpdate:
+                MinInstancesInService: 1
+                MaxBatchSize: 1
+                PauseTime: PT15M
+                WaitOnResourceSignals: true
+
+    # WebServerScaleDownPolicy:
+    #   Type: AWS::AutoScaling::ScalingPolicy
+    #   Properties:
+    #     AdjustmentType: ChangeInCapacity
+    #     AutoScalingGroupName:
+    #       !Ref ECSAutoScalingGroup
+    #     Cooldown: 120
+    #     ScalingAdjustment: -1
+
+    # WebServerScaleUpPolicy:
+    #   Type: AWS::AutoScaling::ScalingPolicy
+    #   Properties:
+    #     AdjustmentType: ChangeInCapacity
+    #     AutoScalingGroupName:
+    #       !Ref ECSAutoScalingGroup
+    #     Cooldown: 120
+    #     ScalingAdjustment: 1
+
+    # CPUAlarmHigh:
+    #   Type: AWS::CloudWatch::Alarm
+    #   Properties:
+    #     AlarmActions:
+    #     - !Ref WebServerScaleUpPolicy
+    #     - !Ref ServiceScaleUpPolicy
+    #     AlarmDescription: Scale-up if CPU > 90% for 2 minutes
+    #     ComparisonOperator: GreaterThanThreshold
+    #     Dimensions:
+    #     - Name: AutoScalingGroupName
+    #       Value:
+    #         !Ref ECSAutoScalingGroup
+    #     EvaluationPeriods: 2
+    #     MetricName: CPUUtilization
+    #     Namespace: AWS/EC2
+    #     Period: 60
+    #     Statistic: Average
+    #     Threshold: 90
+
+    # CPUAlarmLow:
+    #   Type: AWS::CloudWatch::Alarm
+    #   Properties:
+    #     AlarmActions:
+    #     - !Ref WebServerScaleDownPolicy
+    #     - !Ref ServiceScaleDownPolicy
+    #     AlarmDescription: Scale-down if CPU < 70% for 10 minutes
+    #     ComparisonOperator: LessThanThreshold
+    #     Dimensions:
+    #     - Name: AutoScalingGroupName
+    #       Value:
+    #         !Ref ECSAutoScalingGroup
+    #     EvaluationPeriods: 2
+    #     MetricName: CPUUtilization
+    #     Namespace: AWS/EC2
+    #     Period: 300
+    #     Statistic: Average
+    #     Threshold: 70
+
+    # ServiceScalingTarget:
+    #   Type: AWS::ApplicationAutoScaling::ScalableTarget
+    #   DependsOn: Service
+    #   Properties:
+    #     MaxCapacity: !Ref ContainerMaxCount
+    #     MinCapacity: !Ref ContainerMinCount
+    #     ResourceId: !Join ['', [service/, !Ref 'ECSCluster', /, !GetAtt [Service, Name]]]
+    #     RoleARN: !GetAtt [AutoscalingRole, Arn]
+    #     ScalableDimension: ecs:service:DesiredCount
+    #     ServiceNamespace: ecs
+
+    # ServiceScaleDownPolicy:
+    #   Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    #   Properties:
+    #     PolicyName: !Sub '${AWS::StackName}-scale-down-${AWS::Region}'
+    #     PolicyType: StepScaling
+    #     ScalingTargetId: !Ref 'ServiceScalingTarget'
+    #     StepScalingPolicyConfiguration:
+    #       AdjustmentType: PercentChangeInCapacity
+    #       Cooldown: 300
+    #       MetricAggregationType: Average
+    #       MinAdjustmentMagnitude: 1
+    #       StepAdjustments:
+    #       - MetricIntervalLowerBound: 0
+    #         ScalingAdjustment: -25
+
+    # ServiceScaleUpPolicy:
+    #   Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    #   Properties:
+    #     PolicyName: !Sub '${AWS::StackName}-scale-up-${AWS::Region}'
+    #     PolicyType: StepScaling
+    #     ScalingTargetId: !Ref 'ServiceScalingTarget'
+    #     StepScalingPolicyConfiguration:
+    #       AdjustmentType: PercentChangeInCapacity
+    #       Cooldown: 300
+    #       MetricAggregationType: Average
+    #       MinAdjustmentMagnitude: 1
+    #       StepAdjustments:
+    #       - MetricIntervalLowerBound: 0
+    #         ScalingAdjustment: 50
+
+    NotificationTopic:
+      Properties:
+        Subscription:
+        - Endpoint:
+            !Ref OperatorEmail
+          Protocol: email
+      Type: AWS::SNS::Topic
+
+    ECSLaunchConfiguration:
+        Type: AWS::AutoScaling::LaunchConfiguration
+        Properties:
+            AssociatePublicIpAddress: true
+            ImageId:  !FindInMap [AWSRegionToAMI, !Ref "AWS::Region", AMI]
+            InstanceType: !Ref InstanceType
+            KeyName:
+              !Ref KeyName
+            SecurityGroups:
+                - !Ref ECSHostSecurityGroup
+            IamInstanceProfile: !Ref ECSInstanceProfile
+            UserData:
+                "Fn::Base64": !Sub |
+                    #!/bin/bash
+                    yum update -y
+                    yum install -y aws-cfn-bootstrap
+                    /opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource ECSLaunchConfiguration
+                    /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource ECSAutoScalingGroup
+        Metadata:
+            AWS::CloudFormation::Init:
+              configSets:
+                default:
+                - general
+                - ecs-install
+                - efs-install
+              general:
+                # packages:
+                #   yum:
+                #     emacs: []
+                #     screen: []
+                files:
+                  '/etc/cron.daily/yumupdate':
+                    content: !Sub |
+                      #!/bin/bash -xe
+                      YUM=/usr/bin/yum
+                      # -y == assume yes
+                      # -d == debug verbosity
+                      # -e == error-reporting level
+                      # -R == wait 0~n min before running the command (randomise)
+                      # clear all packages, dependency headers, metadata and metadata cache
+                      $YUM -y -d 0 -e 0 clean all
+                      # update the yum package itself
+                      $YUM -y -d 0 -e 0 update yum
+                      # update everything
+                      $YUM -y -R 10 -e 0 -d 0 update --security
+                      #IF YOU JUST WANT TO INSTALL SECURITY UPDATES ADD —security
+                      yum -y update --security
+                    mode: '000500'
+                    owner: root
+                    group: root
+              ecs-install:
+                  commands:
+                      01_add_instance_to_cluster:
+                          command: !Sub echo ECS_CLUSTER=${ECSCluster} >> /etc/ecs/ecs.config
+                  files:
+                      "/etc/cfn/cfn-hup.conf":
+                          mode: 000400
+                          owner: root
+                          group: root
+                          content: !Sub |
+                              [main]
+                              stack=${AWS::StackId}
+                              region=${AWS::Region}
+
+                      "/etc/cfn/hooks.d/cfn-auto-reloader.conf":
+                          content: !Sub |
+                              [cfn-auto-reloader-hook]
+                              triggers=post.update
+                              path=Resources.ContainerInstances.Metadata.AWS::CloudFormation::Init
+                              action=/opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource ECSLaunchConfiguration
+
+                  services:
+                      sysvinit:
+                          cfn-hup:
+                              enabled: true
+                              ensureRunning: true
+                              files:
+                                  - /etc/cfn/cfn-hup.conf
+                                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+              efs-install:
+                packages:
+                  yum:
+                    nfs-utils: []
+                    python27: []
+                files:
+                  '/root/efs-install.sh':
+                    content: !Sub |
+                      #!/bin/bash -xe
+                      echo // running efs-install ...
+                      PATH=$PATH:/usr/local/bin
+                      yum update -y
+                      EC2_AVAIL_ZONE=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone`
+                      EC2_REGION=${AWS::Region}
+                      mkdir /mnt/efs
+                      EFS_FILE_SYSTEM_ID=${FileSystem}
+                      DIR_SRC=$EFS_FILE_SYSTEM_ID.efs.$EC2_REGION.amazonaws.com
+                      DIR_TGT=/mnt/efs
+                      touch /home/ec2-user/echo.res
+                      echo $EFS_FILE_SYSTEM_ID >> /home/ec2-user/echo.res
+                      echo $EC2_AVAIL_ZONE >> /home/ec2-user/echo.res
+                      echo $EC2_REGION >> /home/ec2-user/echo.res
+                      echo $DIR_SRC >> /home/ec2-user/echo.res
+                      echo $DIR_TGT >> /home/ec2-user/echo.res
+                      mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 $DIR_SRC:/ $DIR_TGT >> /home/ec2-user/echo.res
+                      cp -p /etc/fstab /etc/fstab.back-$(date +%F)
+                      echo -e \"$DIR_SRC:/ \t\t $DIR_TGT \t\t nfs \t\t defaults \t\t 0 \t\t 0\" | tee -a /etc/fstab
+                      docker ps
+                      service docker stop
+                      service docker start
+                    mode: '000500'
+                    owner: root
+                    group: root
+                commands:
+                  01_init:
+                    command: '/root/efs-install.sh'
+                    cwd: '/root'
+
+
+
+    # This IAM Role is attached to all of the ECS hosts. It is based on the default role
+    # published here:
+    # http://docs.aws.amazon.com/AmazonECS/latest/developerguide/instance_IAM_role.html
+    #
+    # You can add other IAM policy statements here to allow access from your ECS hosts
+    # to other AWS services. Please note that this role will be used by ALL containers
+    # running on the ECS host.
+
+    ECSRole:
+        Type: AWS::IAM::Role
+        Properties:
+            Path: /
+            RoleName: !Sub ${AWS::StackName}-ecsrole-${AWS::Region}
+            AssumeRolePolicyDocument: |
+                {
+                    "Statement": [{
+                        "Action": "sts:AssumeRole",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": "ec2.amazonaws.com"
+                        }
+                    }]
+                }
+            Policies:
+                - PolicyName: ecs-service
+                  PolicyDocument: |
+                    {
+                        "Statement": [{
+                            "Effect": "Allow",
+                            "Action": [
+                                "ecs:CreateCluster",
+                                "ecs:DeregisterContainerInstance",
+                                "ecs:DiscoverPollEndpoint",
+                                "ecs:Poll",
+                                "ecs:RegisterContainerInstance",
+                                "ecs:StartTelemetrySession",
+                                "ecs:Submit*",
+                                "logs:CreateLogStream",
+                                "logs:PutLogEvents",
+                                "ecr:BatchCheckLayerAvailability",
+                                "ecr:BatchGetImage",
+                                "ecr:GetDownloadUrlForLayer",
+                                "ecr:GetAuthorizationToken"
+                            ],
+                            "Resource": "*"
+                        }]
+                    }
+
+    # AutoscalingRole:
+    #   Type: AWS::IAM::Role
+    #   Properties:
+    #     AssumeRolePolicyDocument:
+    #       Statement:
+    #       - Effect: Allow
+    #         Principal:
+    #           Service: [application-autoscaling.amazonaws.com]
+    #         Action: ['sts:AssumeRole']
+    #     Path: /
+    #     Policies:
+    #     - PolicyName: !Sub ${AWS::StackName}-service-autoscaling-${AWS::Region}
+    #       PolicyDocument:
+    #         Statement:
+    #         - Effect: Allow
+    #           Action: ['application-autoscaling:*', 'cloudwatch:DescribeAlarms', 'cloudwatch:PutMetricAlarm',
+    #             'ecs:DescribeServices', 'ecs:UpdateService']
+    #           Resource: '*'
+
+    ECSInstanceProfile:
+        Type: AWS::IAM::InstanceProfile
+        Properties:
+            Path: /
+            Roles:
+                - !Ref ECSRole
+
+    # Container Service
+    Service:
+        Type: AWS::ECS::Service
+        DependsOn: ListenerRule
+        Properties:
+            Cluster: !Ref ECSCluster
+            Role: !Ref ServiceRole
+            DeploymentConfiguration: 
+              MaximumPercent: 200
+              MinimumHealthyPercent: 25
+            DesiredCount: !Ref ContainerDesiredCount
+            TaskDefinition: !Ref TaskDefinition
+            LoadBalancers:
+                - ContainerName: !Sub ${TagName}-task
+                  ContainerPort: !Ref ContainerPortOut
+                  TargetGroupArn: !Ref TargetGroup
+
+    TaskDefinition:
+        Type: AWS::ECS::TaskDefinition
+        Properties:
+            Family: !Sub ${TagName}-task
+            ContainerDefinitions:
+                - Name: !Sub ${TagName}-task
+                  Essential: true
+                  Image: !Ref ContainerImage
+                  Memory: !Ref TaskMemory
+                  Environment:
+                  - Name: BUILD_REGION
+                    Value: !Ref AWS::Region
+                  - Name: BUILD_VERSION
+                    Value: !Ref BuildVersion
+                  - Name: BUILD_DATE
+                    Value: !Ref BuildDate
+                  - Name: ENVIRONMENT
+                    Value: !Ref TagEnvironment
+                  MountPoints:
+                  - ContainerPath: !Ref MountContainerPath
+                    SourceVolume: !Sub ${TagName}-efs
+                  PortMappings:
+                    - ContainerPort: !Ref ContainerPortIn
+                  LogConfiguration:
+                    LogDriver: awslogs
+                    Options:
+                        awslogs-group: !Ref AWS::StackName
+                        awslogs-region: !Ref AWS::Region
+            Volumes:
+            - Host:
+                SourcePath: !Sub /mnt/efs/${VolumeSourcePathKey}
+              Name: !Sub ${TagName}-efs
+
+    CloudWatchLogsGroup:
+        Type: AWS::Logs::LogGroup
+        Properties:
+            LogGroupName: !Ref AWS::StackName
+            RetentionInDays: 365
+
+    TargetGroup:
+        Type: AWS::ElasticLoadBalancingV2::TargetGroup
+        Properties:
+            VpcId: !Ref VPCID
+            Port: !Ref ContainerPortOut
+            Protocol: HTTP
+            Matcher:
+                HttpCode: 200-299
+            HealthCheckIntervalSeconds: 10
+            HealthCheckPath: !Ref ContainerHealthCheckPath
+            HealthCheckProtocol: HTTP
+            HealthCheckTimeoutSeconds: 5
+            HealthyThresholdCount: 2
+            TargetGroupAttributes:
+            - Key: deregistration_delay.timeout_seconds
+              Value: !Ref DeregistrationDelay
+            Tags:
+            - Key: Name
+              Value: !Sub ${TagName}-tg
+            - Key: client
+              Value: !Ref TagClient
+            - Key: owner
+              Value: !Ref TagOwner
+            - Key: project
+              Value: !Ref TagProject
+            - Key: environment
+              Value: !Ref TagEnvironment
+
+    ListenerRule:
+        Type: AWS::ElasticLoadBalancingV2::ListenerRule
+        Properties:
+            ListenerArn: !Ref LoadBalancerListener
+            Priority: 1
+            Conditions:
+                - Field: path-pattern
+                  Values:
+                    - !Ref ContainerTargetPathPattern
+            Actions:
+                - TargetGroupArn: !Ref TargetGroup
+                  Type: forward
+
+    SSLListenerRule:
+        Type: AWS::ElasticLoadBalancingV2::ListenerRule
+        Condition: AddSSLIntegration
+        Properties:
+            ListenerArn: !Ref SSLLoadBalancerListener
+            Priority: 1
+            Conditions:
+                - Field: path-pattern
+                  Values:
+                    - !Ref ContainerTargetPathPattern
+            Actions:
+                - TargetGroupArn: !Ref TargetGroup
+                  Type: forward
+
+    # This IAM Role grants the service access to register/unregister with the
+    # Application Load Balancer (ALB). It is based on the default documented here:
+    # http://docs.aws.amazon.com/AmazonECS/latest/developerguide/service_IAM_role.html
+    ServiceRole:
+        Type: AWS::IAM::Role
+        Properties:
+            RoleName: !Sub ${AWS::StackName}-ecs-service-${AWS::Region}
+            Path: /
+            AssumeRolePolicyDocument: |
+                {
+                    "Statement": [{
+                        "Effect": "Allow",
+                        "Principal": { "Service": [ "ecs.amazonaws.com" ]},
+                        "Action": [ "sts:AssumeRole" ]
+                    }]
+                }
+            Policies:
+                - PolicyName: !Sub ${TagName}-ecs-service
+                  PolicyDocument:
+                    {
+                        "Version": "2012-10-17",
+                        "Statement": [{
+                                "Effect": "Allow",
+                                "Action": [
+                                    "ec2:AuthorizeSecurityGroupIngress",
+                                    "ec2:Describe*",
+                                    "elasticloadbalancing:DeregisterInstancesFromLoadBalancer",
+                                    "elasticloadbalancing:Describe*",
+                                    "elasticloadbalancing:RegisterInstancesWithLoadBalancer",
+                                    "elasticloadbalancing:DeregisterTargets",
+                                    "elasticloadbalancing:DescribeTargetGroups",
+                                    "elasticloadbalancing:DescribeTargetHealth",
+                                    "elasticloadbalancing:RegisterTargets"
+                                ],
+                                "Resource": "*"
+                        }]
+                    }
+
+Outputs:
+
+    ServiceUrl:
+        Description: The URL endpoint for the product service
+        Value: !GetAtt LoadBalancer.DNSName

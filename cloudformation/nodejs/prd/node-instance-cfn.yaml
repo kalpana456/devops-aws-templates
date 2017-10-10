@@ -1,0 +1,680 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS CloudFormation template Version 0.2.0. Launch an Amazon Linux EC2
+  instance within a ASG to maintain HA/FT.
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Instance Settings
+      Parameters:
+      - InstanceType
+      - KeyName
+      - OperatorEmail
+      - ElasticIP
+    - Label:
+        default: Node Settings
+      Parameters:
+      - NodeScriptName
+      - NodeScriptArgs
+    - Label:
+        default: Network Settings
+      Parameters:
+      - VPCID
+      - SubnetPublic1
+      - SubnetPublic2
+      - AvailabilityZone1
+      - AvailabilityZone2
+      - SSHLocation
+    - Label:
+        default: ASG Settings
+      Parameters:
+      - HealthCheckPath
+      - MaxInstanceCount
+      - MinInstanceCount
+      - DesiredInstanceCount
+    - Label:
+        default: Deployment
+      Parameters:
+      - BuildBucket
+      - DeployPackage
+      - ConfigBucket
+    - Label:
+        default: Environment Variables
+      Parameters:
+      - EnvVar1
+    - Label:
+        default: NewRelic Settings
+      Parameters:
+      - NewRelicKey
+    - Label:
+        default: Tags
+      Parameters:
+      - TagName
+      - TagOwner
+      - TagClient
+      - TagProject
+      - TagEnvironment
+Parameters:
+  InstanceType:
+    Description: WebServer EC2 instance type
+    Type: String
+    Default: t2.small
+    AllowedValues:
+    - t2.micro
+    - t2.small
+    - t2.medium
+    - m3.medium
+    - m3.large
+    - m3.xlarge
+    - m3.2xlarge
+    - c3.large
+    - c3.xlarge
+    - c3.2xlarge
+    - c3.4xlarge
+    - c3.8xlarge
+    - r3.large
+    - r3.xlarge
+    - r3.2xlarge
+    - r3.4xlarge
+    - r3.8xlarge
+    - i2.xlarge
+    - i2.2xlarge
+    - i2.4xlarge
+    - i2.8xlarge
+    - hi1.4xlarge
+    - hs1.8xlarge
+    - cr1.8xlarge
+    - cc2.8xlarge
+    - cg1.4xlarge
+    ConstraintDescription: must be a valid EC2 instance type.
+  OperatorEmail:
+    Description: E-Mail address to notify if there are any scaling operations
+    Type: String
+    AllowedPattern: "([a-zA-Z0-9_\\-\\.]+)@((\\[[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.)|(([a-zA-Z0-9\\-]+\\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\\]?)"
+    ConstraintDescription: must be a valid email address.
+    Default: "name@host.com"
+  VPCID:
+    Description: VPC ID of the VPC you want to deploy the server in
+    Type: AWS::EC2::VPC::Id
+    Default: "vpc-<id>"
+  SubnetPublic1:
+    Description: First Public subnet you want to use
+    Type: AWS::EC2::Subnet::Id
+    Default: "subnet-<id>"
+  SubnetPublic2:
+    Description: Second Public subnet you want to use
+    Type: AWS::EC2::Subnet::Id
+    Default: "subnet-<id>"
+  AvailabilityZone1:
+    Description: One of two Availability Zones that will be used to create subnets
+    Type: String
+    MinLength: 1
+    MaxLength: 1
+    Default: "a"
+  AvailabilityZone2:
+    Description: Two of two Availability Zones that will be used to create subnets.
+      Must be different than AvailabilityZone1
+    Type: String
+    MinLength: 1
+    MaxLength: 1
+    Default: "b"
+  KeyName:
+    Description: The EC2 Key Pair to allow SSH access to the instances
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+    Default: "key-name"
+  SSHLocation:
+    Description: The IP address range that can be used to SSH to the EC2 instances
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    # Default: x.x.x.x/32
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+  ElasticIP:
+    Description: The id of the Elastic IP that this instance will be mapped to.
+    Type: String
+    MinLength: 10
+    MaxLength: 127
+    Default: "eipalloc-<id>"
+  NodeScriptName:
+    Description: The name of the script that will run the node server.
+    Type: String
+    MinLength: 1
+    MaxLength: 127
+    Default: server.js
+  NodeScriptArgs:
+    Description: 'The args that will be passed into the node server, seperated by
+      space. NOTE: This should not be empty'
+    Type: String
+    MinLength: 0
+    MaxLength: 127
+    Default: dev
+  HealthCheckPath:
+    Description: The path that the healthcheck should request
+    Type: String
+    MinLength: 1
+    MaxLength: 127
+    Default: "/status"
+  MinInstanceCount:
+    Description: The minimum no of instances the ASG allows
+    Type: Number
+    Default: 1
+  MaxInstanceCount:
+    Description: The maximum no of instances the ASG allows
+    Type: Number
+    Default: 2
+  DesiredInstanceCount:
+    Description: The minimum no of instances the ASG allows
+    Type: Number
+    Default: 1
+  BuildBucket:
+    Description: Main Bucket and Path where the deploy source is installed. Should
+      not start or end with SLASH
+    Type: String
+    Default: bucket/dev/node/package
+  ConfigBucket:
+    Description: Main Bucket and Path where the config source is installed. Should
+      not start or end with SLASH
+    Type: String
+    Default: bucket/dev/node/nginx
+  EnvVar1:
+    Type: String
+    Default: EnvVar1
+  DeployPackage:
+    Description: Name of the source package to be deployed.
+    Type: String
+    Default: package.tgz
+  UserDataScript:
+    Description: The custom script that instances will run on boot
+    Type: String
+    Default: echo sample init script
+  NewRelicKey:
+    Type: String
+    Default: <newrelic-key>
+  TagName:
+    Description: Tag used for Name of the resource
+    Type: String
+    MinLength: 1
+    MaxLength: 127
+    Default: "tag-name"
+  TagClient:
+    Description: Tag used for client of the resource
+    Type: String
+    MinLength: 1
+    MaxLength: 127
+    Default: "tag-client"
+  TagOwner:
+    Description: Tag used for the owner of the resource created (email address).
+    Type: String
+    MinLength: 1
+    MaxLength: 127
+    Default: "name@host.com"
+  TagProject:
+    Description: Tag used for project associated with resource.
+    Type: String
+    MinLength: 1
+    MaxLength: 127
+    Default: "tag-project"
+  TagEnvironment:
+    Description: Tag used for environment associated with resource.
+    Type: String
+    MinLength: 1
+    MaxLength: 127
+    Default: dev
+    AllowedValues:
+    - dev
+    - qa
+    - stg
+    - prd
+    - test
+Mappings:
+  AWSInstanceType2Arch:
+    t2.micro:
+      Arch: HVM64
+    t2.small:
+      Arch: HVM64
+    t2.medium:
+      Arch: HVM64
+    m3.medium:
+      Arch: HVM64
+    m3.large:
+      Arch: HVM64
+    m3.xlarge:
+      Arch: HVM64
+    m3.2xlarge:
+      Arch: HVM64
+    c3.large:
+      Arch: HVM64
+    c3.xlarge:
+      Arch: HVM64
+    c3.2xlarge:
+      Arch: HVM64
+    c3.4xlarge:
+      Arch: HVM64
+    c3.8xlarge:
+      Arch: HVM64
+    r3.large:
+      Arch: HVM64
+    r3.xlarge:
+      Arch: HVM64
+    r3.2xlarge:
+      Arch: HVM64
+    r3.4xlarge:
+      Arch: HVM64
+    r3.8xlarge:
+      Arch: HVM64
+    i2.xlarge:
+      Arch: HVM64
+    i2.2xlarge:
+      Arch: HVM64
+    i2.4xlarge:
+      Arch: HVM64
+    i2.8xlarge:
+      Arch: HVM64
+    hi1.4xlarge:
+      Arch: HVM64
+    hs1.8xlarge:
+      Arch: HVM64
+    cr1.8xlarge:
+      Arch: HVM64
+    cc2.8xlarge:
+      Arch: HVM64
+  AWSRegionArch2AMI:
+    us-east-1:
+      HVM64: ami-c481fad3
+    us-west-1:
+      HVM64: ami-de347abe
+    us-west-2:
+      HVM64: ami-b04e92d0
+Resources:
+  NotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+      - Endpoint:
+          !Ref OperatorEmail
+        Protocol: email
+  AssumeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: DescribeInstances
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - cloudformation:DescribeStackResource
+            - ec2:AssociateAddress
+            - ec2:DescribeInstances
+            Resource: "*"
+          - Effect: Allow
+            Action:
+            - ec2:DescribeInstances
+            Resource: "*"
+          - Effect: Allow
+            Action:
+            - s3:*
+            Resource:
+            - !Join [ "", [ "arn:aws:s3:::", !Ref BuildBucket, "/*"] ]
+            - !Join [ "", [ "arn:aws:s3:::", !Ref ConfigBucket, "/*"] ]
+  RootInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+      - !Ref AssumeRole
+  ServerASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      Tags:
+      - Key: Name
+        Value:
+          !Ref TagName
+        PropagateAtLaunch: true
+      - Key: client
+        Value:
+          !Ref TagClient
+        PropagateAtLaunch: true
+      - Key: owner
+        Value:
+          !Ref TagOwner
+        PropagateAtLaunch: true
+      - Key: project
+        Value:
+          !Ref TagProject
+        PropagateAtLaunch: true
+      - Key: environment
+        Value:
+          !Ref TagEnvironment
+        PropagateAtLaunch: true
+      AvailabilityZones:
+      - !Join [ "", [ !Ref "AWS::Region", !Ref AvailabilityZone1 ] ]
+      - !Join [ "", [ !Ref "AWS::Region", !Ref AvailabilityZone2 ] ]
+      LaunchConfigurationName:
+        !Ref LaunchConfig
+      MinSize:
+        !Ref MinInstanceCount
+      MaxSize:
+        !Ref MaxInstanceCount
+      DesiredCapacity:
+        !Ref DesiredInstanceCount
+      VPCZoneIdentifier:
+      - !Ref SubnetPublic1
+      - !Ref SubnetPublic2
+      NotificationConfigurations:
+      - TopicARN:
+          !Ref NotificationTopic
+        NotificationTypes:
+        - autoscaling:EC2_INSTANCE_LAUNCH
+        - autoscaling:EC2_INSTANCE_LAUNCH_ERROR
+        - autoscaling:EC2_INSTANCE_TERMINATE
+        - autoscaling:EC2_INSTANCE_TERMINATE_ERROR
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT30M
+        Count: 1
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        MaxBatchSize: 1
+        PauseTime: PT15M
+        WaitOnResourceSignals: true
+  LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Metadata:
+      'AWS::CloudFormation::Init':
+        configSets:
+          default:
+            [setup, node-install, nginx-install, app-install, newrelic-install]
+        setup:
+          packages:
+            yum:
+              emacs: []
+              screen: []
+              git: []
+          files:
+            '/etc/cron.daily/yumupdate':
+              content: !Sub |
+                #!/bin/bash -xe
+                YUM=/usr/bin/yum
+                # -y == assume yes
+                # -d == debug verbosity
+                # -e == error-reporting level
+                # -R == wait 0~n min before running the command (randomise)
+                # clear all packages, dependency headers, metadata and metadata cache
+                $YUM -y -d 0 -e 0 clean all
+                # update the yum package itself
+                $YUM -y -d 0 -e 0 update yum
+                # update everything
+                $YUM -y -R 10 -e 0 -d 0 update --security
+                #IF YOU JUST WANT TO INSTALL SECURITY UPDATES ADD —security
+                yum -y update --security
+              mode: '000500'
+              owner: root
+              group: root
+        node-install:
+          files:
+            '/root/node-install.sh':
+              content: !Sub |
+                #!/bin/bash -xe
+                echo // running node-install ...
+                curl --silent --location https://rpm.nodesource.com/setup_7.x | bash -
+                yum install -y nodejs
+                node --version
+                npm --version
+                npm update -g npm
+                npm install -g n
+                n stable
+                NODE_STABLE_VERSION=$(n --stable)
+                NODE_STABLE_BINPATH=$(n which $NODE_STABLE_VERSION)
+                rm -f /usr/bin/node
+                ln -s /usr/local/bin/node /usr/bin/node
+                cd /usr/src/
+                echo // node-install done ...
+              mode: '000500'
+              owner: root
+              group: root
+          commands:
+            01_init:
+              command: '/root/node-install.sh'
+              cwd: '/root'
+        nginx-install:
+          packages:
+            yum:
+              nginx: []
+          files:
+            '/root/nginx-install.sh':
+              content: !Sub |
+                #!/bin/bash -xe
+                echo // running nginx-install ...
+                cd /etc/nginx/
+                aws s3 cp s3://${ConfigBucket}/nginx.conf .
+                echo // nginx-install done ...
+              mode: '000500'
+              owner: root
+              group: root
+          commands:
+            01_init:
+              command: '/root/nginx-install.sh'
+              cwd: '/root'
+          services:
+            sysvinit:
+              nginx:
+                enabled: true
+                ensureRunning: true
+                files:
+                - '/etc/nginx/nginx.conf'
+        app-install:
+          files:
+            '/opt/node/app/envvars':
+              content: !Sub |
+                export ENV_VAR_1=${EnvVar1}
+              mode: '000500'
+              owner: root
+              group: root
+            '/root/app-install.sh':
+              content: !Sub |
+                #!/bin/bash -xe
+                echo // running app-install ...
+                mkdir -p /opt/node/app/
+                cd /opt/node/app/
+                export PATH=/usr/local/bin:$PATH
+                npm install -g pm2
+                aws s3 cp s3://${BuildBucket}/${DeployPackage} .
+                tar -xvf ${DeployPackage}
+                npm install
+                echo // app-install done ...
+              mode: '000500'
+              owner: root
+              group: root
+          commands:
+            01_init:
+              command: '/root/app-install.sh'
+              cwd: '/root'
+        newrelic-install:
+          files:
+            '/opt/node/app/newrelic.js':
+              content: !Sub |
+                'use strict'
+                exports.config = {
+                  app_name: ['${TagName}'],
+                  license_key: '${NewRelicKey}',
+                  logging: {
+                    level: 'info'
+                  }
+                }
+              mode: '000500'
+              owner: root
+              group: root
+            '/root/newrelic-install.sh':
+              content: !Sub |
+                #!/bin/bash -xe
+                echo // running newrelic-install ...
+                cd /opt/node/app/
+                NEWRELIC_KEY=${NewRelicKey}
+                if [ -z '$NEWRELIC_KEY' ];
+                then
+                  echo 'skipping newrelic install...';
+                else
+                  npm install newrelic;
+                  echo require\(\'newrelic\'\)\; | cat - ${NodeScriptName} > tmp && mv -f tmp ${NodeScriptName};
+                fi
+                echo // newrelic-install done ...
+              mode: '000500'
+              owner: root
+              group: root
+          commands:
+            01_init:
+              command: '/root/newrelic-install.sh'
+              cwd: '/root'
+    Properties:
+      AssociatePublicIpAddress: true
+      KeyName:
+        !Ref KeyName
+      ImageId:
+        !FindInMap [ AWSRegionArch2AMI, !Ref "AWS::Region", !FindInMap [ AWSInstanceType2Arch, !Ref InstanceType, Arch ] ]
+      SecurityGroups:
+      - !Ref InstanceSecurityGroup
+      InstanceType:
+        !Ref InstanceType
+      IamInstanceProfile:
+        !Ref RootInstanceProfile
+      UserData:
+        'Fn::Base64': !Sub |
+          #!/bin/bash -xe
+          echo // running userdata ...
+          source /etc/profile
+          echo // updating yum ...
+          yum update -y
+          echo // installing awscli ...
+          cd /usr/src/
+          wget https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+          tar xvf aws-cfn-bootstrap-latest.tar.gz
+          cd aws-cfn-bootstrap-1.4/
+          python setup.py build
+          python setup.py install
+          echo // running cfn init ...
+          /usr/local/bin/cfn-init -v --stack ${AWS::StackName} --resource LaunchConfig --region ${AWS::Region}
+          echo // running app ...
+          cd /opt/node/app/
+          export HOME=/root         
+          echo running app as $(whoami) ...
+          /usr/local/bin/pm2 list
+          source envvars
+          /usr/local/bin/pm2 start ${NodeScriptName}
+          cd ~/
+          sleep 5s
+          echo // testing healthcheck ...
+          curl --head --fail localhost${HealthCheckPath}
+          echo // cfn stack completed successfully ...
+          /usr/local/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource ServerASG --region ${AWS::Region}
+          echo // updating elastic ip ...
+          EIP=${ElasticIP}
+          INSTANCE_ID=`curl -s http://169.254.169.254/latest/meta-data/instance-id`
+          /usr/bin/aws ec2 associate-address --instance-id $INSTANCE_ID --allocation-id $EIP --allow-reassociation --region ${AWS::Region}
+          echo // done
+          ${UserDataScript}
+  WebServerScaleUpPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName:
+        !Ref ServerASG
+      Cooldown: 60
+      ScalingAdjustment: 1
+  WebServerScaleDownPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName:
+        !Ref ServerASG
+      Cooldown: 60
+      ScalingAdjustment: -1
+  CPUAlarmHigh:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Scale-up if CPU > 90% for 10 minutes
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 90
+      AlarmActions:
+      - !Ref WebServerScaleUpPolicy
+      Dimensions:
+      - Name: AutoScalingGroupName
+        Value:
+          !Ref ServerASG
+      ComparisonOperator: GreaterThanThreshold
+  CPUAlarmLow:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Scale-down if CPU < 70% for 10 minutes
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 70
+      AlarmActions:
+      - !Ref WebServerScaleDownPolicy
+      Dimensions:
+      - Name: AutoScalingGroupName
+        Value:
+          !Ref ServerASG
+      ComparisonOperator: LessThanThreshold
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId:
+        !Ref VPCID
+      GroupDescription: Enable SSH access
+      SecurityGroupEgress:
+      - FromPort: 80
+        ToPort: 80
+        IpProtocol: tcp
+        CidrIp: 0.0.0.0/0
+      - FromPort: 443
+        ToPort: 443
+        IpProtocol: tcp
+        CidrIp: 0.0.0.0/0
+      SecurityGroupIngress:
+      - FromPort: 22
+        ToPort: 22
+        IpProtocol: tcp
+        CidrIp:
+          !Ref SSHLocation
+      - FromPort: 80
+        ToPort: 80
+        IpProtocol: tcp
+        CidrIp: 0.0.0.0/0
+      Tags:
+      - Key: Name
+        Value:
+          !Ref TagName
+      - Key: client
+        Value:
+          !Ref TagClient
+      - Key: owner
+        Value:
+          !Ref TagOwner
+      - Key: project
+        Value:
+          !Ref TagProject
+      - Key: environment
+        Value:
+          !Ref TagEnvironment

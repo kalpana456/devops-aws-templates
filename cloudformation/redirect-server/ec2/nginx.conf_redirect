@@ -1,0 +1,33 @@
+user www-data;
+worker_processes auto;
+error_log /var/log/nginx/error.log;
+pid /var/run/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    keepalive_timeout   65;
+    types_hash_max_size 2048;
+
+  server {
+        listen 80;
+        server_name redirect.example.com;
+        return 301 $scheme://www.example.com$request_uri;
+        access_log /var/log/nginx/access.log;
+        error_log /var/log/nginx/error.log;
+  }
+
+  server {
+        listen 443;
+        server_name redirect.example.com;
+        return 301 $scheme://www.example.com$request_uri;
+        ssl    on;
+        ssl_certificate         /etc/nginx/ssl/star_example_com.crt;
+        ssl_certificate_key    /etc/nginx/ssl/star_example_com.key;
+        access_log /var/log/nginx/ssl-access.log;
+        error_log /var/log/nginx/ssl-error.log;
+  }
+
+}

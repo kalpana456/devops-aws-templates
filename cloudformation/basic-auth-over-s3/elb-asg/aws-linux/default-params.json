@@ -1,0 +1,73 @@
+[{
+        "ParameterValue": "x.x.x.x/32",
+        "ParameterKey": "AllowIPFrom"
+    },
+    {
+        "ParameterValue": "0.01",
+        "ParameterKey": "BuildVersion"
+    },
+    {
+        "ParameterValue": "/path/in/bucket",
+        "ParameterKey": "S3BucketPath"
+    },
+    {
+        "ParameterValue": "",
+        "ParameterKey": "SSLCertificateId"
+    },
+    {
+        "ParameterValue": "name-env",
+        "ParameterKey": "TagName"
+    },
+    {
+        "ParameterValue": "client-name",
+        "ParameterKey": "TagClient"
+    },
+    {
+        "ParameterValue": "env",
+        "ParameterKey": "TagEnvironment"
+    },
+    {
+        "ParameterValue": "name@email.com",
+        "ParameterKey": "TagOwner"
+    },
+    {
+        "ParameterValue": "subnet-id",
+        "ParameterKey": "SubnetPublic1"
+    },
+    {
+        "ParameterValue": "password",
+        "ParameterKey": "BasicAuthPassword"
+    },
+    {
+        "ParameterValue": "subnet-id",
+        "ParameterKey": "SubnetPublic2"
+    },
+    {
+        "ParameterValue": "key-pair",
+        "ParameterKey": "EC2KeyPair"
+    },
+    {
+        "ParameterValue": "name@host.com",
+        "ParameterKey": "OperatorEmail"
+    },
+    {
+        "ParameterValue": "user",
+        "ParameterKey": "BasicAuthUsername"
+    },
+    {
+        "ParameterValue": "vpc-id",
+        "ParameterKey": "VpcId"
+    },
+    {
+        "ParameterValue": "project-name",
+        "ParameterKey": "TagProject"
+    },
+    {
+        "ParameterValue": "t2.micro",
+        "ParameterKey": "EC2InstanceType"
+    },
+    {
+        "ParameterValue": "bucket-name",
+        "ParameterKey": "S3BucketName"
+    }
+]

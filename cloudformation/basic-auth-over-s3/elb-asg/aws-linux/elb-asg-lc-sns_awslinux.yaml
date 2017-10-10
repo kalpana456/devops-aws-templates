@@ -1,0 +1,688 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: This Cloudformation template allows you to add Basic Authentication over
+  an S3 Bucket. It creates a micro EC2 instance which acts as a Proxy Server to a private
+  S3 Bucket.
+
+# The AMI's for this template as well as the regions are not all up to date. You can get more details here
+# and add regions per requirements:
+# You can find more details here: https://aws.amazon.com/amazon-linux-ami/
+Mappings:
+  AWSInstanceType2Arch:
+    c3.2xlarge:
+      Arch: HVM64
+    c3.4xlarge:
+      Arch: HVM64
+    c3.8xlarge:
+      Arch: HVM64
+    c3.large:
+      Arch: HVM64
+    c3.xlarge:
+      Arch: HVM64
+    cc2.8xlarge:
+      Arch: HVM64
+    cr1.8xlarge:
+      Arch: HVM64
+    hi1.4xlarge:
+      Arch: HVM64
+    hs1.8xlarge:
+      Arch: HVM64
+    i2.2xlarge:
+      Arch: HVM64
+    i2.4xlarge:
+      Arch: HVM64
+    i2.8xlarge:
+      Arch: HVM64
+    i2.xlarge:
+      Arch: HVM64
+    m3.2xlarge:
+      Arch: HVM64
+    m3.large:
+      Arch: HVM64
+    m3.medium:
+      Arch: HVM64
+    m3.xlarge:
+      Arch: HVM64
+    r3.2xlarge:
+      Arch: HVM64
+    r3.4xlarge:
+      Arch: HVM64
+    r3.8xlarge:
+      Arch: HVM64
+    r3.large:
+      Arch: HVM64
+    r3.xlarge:
+      Arch: HVM64
+    t2.medium:
+      Arch: HVM64
+    t2.micro:
+      Arch: HVM64
+    t2.small:
+      Arch: HVM64
+
+  # This template is currently using the default Amazon Linux Distribution.
+  # You can find more details here: https://aws.amazon.com/amazon-linux-ami/
+  AWSRegionArch2AMI:
+    us-east-1:
+      HVM64: ami-0b33d91d
+    us-west-1:
+      HVM64: ami-165a0876
+    us-west-2:
+      HVM64: ami-f173cc91
+    ap-southeast-1:
+      HVM64: ami-dc9339bf
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Authentication
+      Parameters:
+      - BasicAuthUsername
+      - BasicAuthPassword
+    - Label:
+        default: S3 Bucket Settings
+      Parameters:
+      - S3BucketName
+      - S3BucketPath
+    - Label:
+        default: Instance Settings
+      Parameters:
+      - BuildVersion
+      - OperatorEmail
+      - EC2InstanceType
+      - EC2KeyPair
+      - AllowIPFrom
+      - AllowHTTPFrom
+      - VpcId
+      - SubnetPublic1
+      - SubnetPublic2
+    - Label:
+        default: SSL Cert
+      Parameters:
+      - SSLCertificateId
+    - Label:
+        default: Tags
+      Parameters:
+      - TagName
+      - TagEnvironment
+      - TagOwner
+      - TagClient
+      - TagProject
+Outputs:
+  ElasticLoadBalancerDNS:
+    Description: DNS for the Load Balancer
+    Value: !GetAtt ElasticLoadBalancer.DNSName
+  ElasticIP:
+    Description: IP for newly created Instance
+    Value: !Ref ElasticIP
+
+Parameters:
+  AllowIPFrom:
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    # Default: x.x.x.x/32
+    Description: The net block (CIDR) that SSH is available to
+    MaxLength: 18
+    MinLength: 9
+    Type: String
+  AllowHTTPFrom:
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+    Default: 999.999.999.999/32
+    Description: The net block (CIDR) that SSH is available to
+    MaxLength: 18
+    MinLength: 9
+    Type: String
+  BasicAuthPassword:
+    AllowedPattern: '[a-zA-Z0-9_./\-]*'
+    ConstraintDescription: must begin with a letter and can contain alphanumeric characters
+      including the following _ - . / \ (should be at least 3 characters long).
+    Description: The expected Password for Basic Authentication
+    MaxLength: 255
+    MinLength: 3
+    NoEcho: true
+    Type: String
+  BasicAuthUsername:
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9_./\-\ ]*'
+    ConstraintDescription: must begin with a letter and can contain alphanumeric or spaces
+      including the following _ - . / \ (should be at least 3 characters long).
+    Description: Used to modify basic auth or turn it off
+    MaxLength: 255
+    MinLength: 3
+    Type: String
+  BasicAuthModify:
+    AllowedPattern: '[a-zA-Z"][a-zA-Z0-9_./\-\ "]*'
+    ConstraintDescription: 'must begin with a letter and can contain alphanumeric or spaces
+      including the following _ - . / \ " (should be at least 3 characters long).'
+    Description: Allows you to turn off Auth or change the realm name.
+    Default: '"Restricted"'
+    MaxLength: 255
+    MinLength: 3
+    Type: String
+  BuildVersion:
+    Default: 0.01
+    Description: The build version for this image.
+    Type: String
+  OperatorEmail:
+    AllowedPattern: ([a-zA-Z0-9_\-\.]+)@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.)|(([a-zA-Z0-9\-]+\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\]?)
+    ConstraintDescription: must be a valid email address.
+    Description: E-Mail address to notify if there are any scaling operations
+    Type: String
+  EC2InstanceType:
+    AllowedValues:
+    - t1.micro
+    - t2.micro
+    - t2.small
+    - t2.medium
+    - m1.small
+    - m1.medium
+    - m1.large
+    - m1.xlarge
+    - m2.xlarge
+    - m2.2xlarge
+    - m2.4xlarge
+    - m3.medium
+    - m3.large
+    - m3.xlarge
+    - m3.2xlarge
+    ConstraintDescription: Must be a valid EC2 HVM instance type.
+    # Default: t2.micro
+    Description: EC2 HVM instance type (recommended size is t2.micro for non-production
+      servers).
+    Type: String
+  EC2KeyPair:
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+    # Default: key-pair
+    Description: The name of an EC2 Key Pair to allow SSH access to the instance.
+    Type: AWS::EC2::KeyPair::KeyName
+  SubnetPublic1:
+    # Default: subnet-id
+    Description: First Public subnet you want to use
+    Type: AWS::EC2::Subnet::Id
+  SubnetPublic2:
+    # Default: subnet-id
+    Description: Second Public subnet you want to use
+    Type: AWS::EC2::Subnet::Id
+  SSLCertificateId:
+    Default: <ssl-cert-id>
+    Description: Name of the SSL cert that will be used by the Load Balancer
+    Type: String
+  S3BucketName:
+    ConstraintDescription: 'Must be a valid S3 bucket name.'
+    # Default: bucket-name
+    Description: The name of the S3 bucket you want to protect - NOTE - the existing
+      bucket policy will be over-written. Also, it should not have any slashes (/).
+    Type: String
+  S3BucketPath:
+    ConstraintDescription: 'Should start with / and end with path name; ex. /path/env'
+    # Default: bucket-path
+    Description: The path within the bucket - NOTE - it should start with / and end with path name; ex. /path/env.
+    Type: String
+  TagClient:
+    # Default: tag-client
+    ConstraintDescription: Should be at least 3 characters long.
+    Description: Name of the client.
+    MaxLength: 255
+    MinLength: 3
+    Type: String
+  TagName:
+    # Default: tag-name
+    Description: Tag used for Name of the resource
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  TagEnvironment:
+    AllowedValues:
+    - dev
+    - qa
+    - stg
+    - prd
+    - test
+    # Default: dev
+    Description: Describe the environment as dev, qa, stg, prd
+    Type: String
+  TagOwner:
+    ConstraintDescription: Should be at least 3 characters long.
+    # Default: name@host.com
+    Description: Email address of the stack owner.
+    MaxLength: 255
+    MinLength: 3
+    Type: String
+  TagProject:
+    ConstraintDescription: Should be at least 3 characters long.
+    Description: Name of the project.
+    MaxLength: 255
+    MinLength: 3
+    # Default: tag-project
+    Type: String
+  TagJobcode:
+    AllowedPattern: '^[a-zA-Z0-9]+$'
+    ConstraintDescription: Should be at least 3 characters long.
+    Description: The jobcode of the project the default is RIT Q0108
+    MaxLength: 24
+    MinLength: 3
+    Default: Q0108
+    Type: String
+  VpcId:
+    # Default: vpc-id
+    Description: Vpc Id of the VPC you want to deploy the server inside.
+    Type: AWS::EC2::VPC::Id
+
+Conditions: 
+  AllowHTTPFromCheck: !Not [ !Equals [ !Ref AllowHTTPFrom, '999.999.999.999/32' ]]
+
+Resources:
+  LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    DependsOn:
+    - EC2SecurityGroup
+    - ElasticIP
+    Metadata:
+      AWS::CloudFormation::Init:
+        RunConfig:
+          commands:
+            htpasswd:
+              command:
+                !Sub |
+                  printf "${BasicAuthUsername}:$(openssl passwd -crypt ${BasicAuthPassword})" >> .htpasswd
+              cwd: /etc/nginx/
+              ignoreErrors: false
+          files:
+            /etc/nginx/nginx.conf:
+              content:
+                !Sub |
+                  user  nginx;
+                  worker_processes  1;
+
+                  error_log  /var/log/nginx/error.log;
+                  pid        /var/run/nginx.pid;
+
+                  events {
+                      worker_connections  1024;
+                  }
+
+                  http {
+                      include       /etc/nginx/mime.types;
+                      default_type  application/octet-stream;
+                      log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                                        '$status $body_bytes_sent "$http_referer" '
+                                        '"$http_user_agent" "$http_x_forwarded_for"';
+
+                      access_log  /var/log/nginx/access.log  main;
+                      sendfile        on;
+                      rewrite_log     on;
+                      keepalive_timeout  65;
+                      include /etc/nginx/conf.d/*.conf;
+                      index   index.html index.htm;
+                      
+                      server {
+                          listen 80 default deferred;
+
+                          set $redirect_to_https 0;
+
+                          if ($http_x_forwarded_proto != 'https') {
+                            set $redirect_to_https 1;
+                          }
+                          if ($request_uri = '/status/index.html') {
+                            set $redirect_to_https 0;
+                          }
+                          if ($redirect_to_https = 1) {
+                            rewrite ^ https://$host$request_uri? permanent;
+                          }
+
+                          server_name  localhost;
+                          root         /usr/share/nginx/html;
+                          rewrite  ^/$  /index.html  last;
+                          try_files $uri $uri/index.html =404;
+
+                      location /status {
+                               auth_basic          off;
+                      }
+
+                      location / {
+                            rewrite ^\/([A-z0-9])*$ /index.html;
+                            auth_basic ${BasicAuthModify};
+                            auth_basic_user_file /etc/nginx/.htpasswd;
+                            proxy_set_header Authorization "";
+                            proxy_pass https://${S3BucketName}.s3.amazonaws.com${S3BucketPath}/;
+                          }
+
+                          error_page  404              /404.html;
+                                   location = /40x.html {
+                                   auth_basic          off;
+                          }
+
+                          error_page   500 502 503 504  /50x.html;
+                                   location = /50x.html {
+                                   auth_basic          off;
+                          }
+                      }
+                  }                  
+              group: root
+              mode: 000644
+              owner: root
+            /tmp/policy.json:
+              content:
+                !Sub |
+                  {
+                    "Version": "2012-10-17",
+                    "Id": "http referer policy example",
+                    "Statement": [
+                      {
+                          "Sid": "IPAllow",
+                          "Effect": "Allow",
+                          "Principal": "*",
+                          "Action": "s3:*",
+                          "Resource": "arn:aws:s3:::${S3BucketName}/*",
+                          "Condition": {
+                              "IpAddress": {
+                                  "aws:SourceIp": "x.x.x.x/32"
+                              }
+                          }
+                      }
+                    ]
+                  }
+              group: root
+              mode: 000644
+              owner: root
+        RunInstall:
+          files:
+            /etc/cfn/cfn-hup.conf:
+              content:
+                !Sub |
+                  [main]
+                  stack=${AWS::StackId}
+                  region=${AWS::Region}
+              group: root
+              mode: 000400
+              owner: root
+            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+              content:
+                !Sub |
+                  [cfn-auto-reloader-hook]
+                  triggers=post.update
+                  path=Resources.EC2Instance.Metadata.AWS::CloudFormation::Init
+                  action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource EC2Instance --configsets InstallAndConfigure --region ${AWS::Region}
+              group: root
+              mode: 000400
+              owner: root
+          packages:
+            yum:
+              emacs: []
+              nginx: []
+              screen: []
+          services:
+            sysvinit:
+              cfn-hup:
+                enabled: true
+                ensureRunning: true
+                files:
+                - /etc/cfn/cfn-hup.conf
+                - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+              nginx:
+                enabled: true
+                ensureRunning: true
+                files:
+                - /etc/nginx/nginx.conf
+                - /etc/nginx/.htpasswd
+        configSets:
+          InstallAndConfigure:
+          - RunInstall
+          - RunConfig
+    Properties:
+      AssociatePublicIpAddress: true
+      IamInstanceProfile: !Ref InstanceProfile
+      ImageId: 
+        Fn::FindInMap:
+        - AWSRegionArch2AMI
+        - !Ref AWS::Region
+        - Fn::FindInMap:
+          - AWSInstanceType2Arch
+          - !Ref EC2InstanceType
+          - Arch
+      InstanceType: 
+        !Ref EC2InstanceType
+      KeyName: 
+        !Ref EC2KeyPair
+      SecurityGroups: 
+        - !Ref EC2SecurityGroup
+      UserData:
+        "Fn::Base64": !Sub |
+          #!/bin/bash -x
+          echo running ${BuildVersion} ...
+          yum update -y
+          # Install the files and packages from the metadata
+          /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource LaunchConfig --configsets InstallAndConfigure --region ${AWS::Region}
+          #set up nginx
+          mkdir -p /usr/share/nginx/html/status/
+          echo OK > /usr/share/nginx/html/status/index.html
+          #set up elastic ip
+          ELASTIC_IP=${ElasticIP}
+          ELASTIC_IP_ID=${ElasticIP.AllocationId}
+          INSTANCE_ID=`curl -s http://169.254.169.254/latest/meta-data/instance-id`
+          aws ec2 associate-address --instance-id $INSTANCE_ID --allocation-id $ELASTIC_IP_ID --allow-reassociation --region ${AWS::Region}
+          echo -e "updating policy file..."
+          sed -i -e "s|x.x.x.x|$ELASTIC_IP|g" /tmp/policy.json
+          echo -e "applying policy..."
+          aws s3api put-bucket-policy --bucket ${S3BucketName} --policy file:///tmp/policy.json
+          service nginx restart
+          # Signal the status from cfn-init
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource ServerASG --region ${AWS::Region}
+
+  ServerASG:
+    DependsOn: ElasticIP
+    Properties:      
+      LaunchConfigurationName:
+        !Ref LaunchConfig
+      LoadBalancerNames:
+      - !Ref ElasticLoadBalancer
+      DesiredCapacity: 1
+      MaxSize: 2
+      MinSize: 1
+      NotificationConfigurations:
+      - NotificationTypes:
+        - autoscaling:EC2_INSTANCE_LAUNCH
+        - autoscaling:EC2_INSTANCE_LAUNCH_ERROR
+        - autoscaling:EC2_INSTANCE_TERMINATE
+        - autoscaling:EC2_INSTANCE_TERMINATE_ERROR
+        TopicARN:
+          !Ref NotificationTopic
+      Tags:
+      - Key: Name
+        PropagateAtLaunch: true
+        Value:
+          !Ref TagName
+      - Key: client
+        PropagateAtLaunch: true
+        Value:
+          !Ref TagClient
+      - Key: owner
+        PropagateAtLaunch: true
+        Value:
+          !Ref TagOwner
+      - Key: project
+        PropagateAtLaunch: true
+        Value:
+          !Ref TagProject
+      - Key: environment
+        PropagateAtLaunch: true
+        Value:
+          !Ref TagEnvironment
+      - Key: jobcode
+        PropagateAtLaunch: true
+        Value:
+          !Ref TagJobcode
+      VPCZoneIdentifier:
+      - !Ref SubnetPublic1
+      - !Ref SubnetPublic2
+    Type: AWS::AutoScaling::AutoScalingGroup
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT10M
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        PauseTime: PT10M
+        MaxBatchSize: 1
+        MinInstancesInService: 0
+        WaitOnResourceSignals: true
+
+  ElasticLoadBalancer:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      CrossZone: true
+      HealthCheck:
+        HealthyThreshold: 3
+        Interval: 30
+        Target: "HTTP:80/status/index.html"
+        Timeout: 5
+        UnhealthyThreshold: 5
+      ConnectionDrainingPolicy:
+        Enabled: false
+        Timeout: 0
+      Listeners:
+      - InstancePort: 80
+        LoadBalancerPort: 80
+        Protocol: HTTP
+      - InstancePort: 80
+        InstanceProtocol: HTTP
+        LoadBalancerPort: 443
+        Protocol: HTTPS
+        SSLCertificateId: !Ref SSLCertificateId
+      SecurityGroups:
+      - !Ref LoadBalancerSecurityGroup
+      Subnets:
+      - !Ref SubnetPublic1
+      - !Ref SubnetPublic2    
+
+  NotificationTopic:
+    Properties:
+      Subscription:
+      - Endpoint:
+          !Ref OperatorEmail
+        Protocol: email
+    Type: AWS::SNS::Topic
+
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for EC2
+      SecurityGroupEgress:
+      - CidrIp: 0.0.0.0/0
+        FromPort: 0
+        IpProtocol: tcp
+        ToPort: 65535
+      SecurityGroupIngress:
+      - SourceSecurityGroupId:
+          !Ref LoadBalancerSecurityGroup
+        FromPort: 80
+        IpProtocol: tcp        
+        ToPort: 80
+      - CidrIp:
+          !Ref AllowIPFrom
+        FromPort: 22
+        IpProtocol: tcp
+        ToPort: 22
+      Tags:
+      - Key: Name
+        Value: !Sub ${AWS::StackName}-ec2-sg
+      - Key: resource
+        Value: !Sub ${AWS::StackName}-ec2-sg
+      - Key: environment
+        Value: !Ref TagEnvironment
+      - Key: owner
+        Value: !Ref TagOwner
+      - Key: client
+        Value: !Ref TagClient
+      - Key: project
+        Value: !Ref TagProject
+      - Key: jobcode
+        Value: !Ref TagJobcode
+      VpcId: !Ref VpcId
+
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable access to the load balancer
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+      - CidrIp: 0.0.0.0/0
+        FromPort: 80
+        IpProtocol: tcp
+        ToPort: 80
+      SecurityGroupIngress:
+      - CidrIp: !If [ AllowHTTPFromCheck, !Ref AllowHTTPFrom, !Ref AllowIPFrom]
+        FromPort: 80
+        IpProtocol: tcp
+        ToPort: 80
+      - CidrIp: !If [ AllowHTTPFromCheck, !Ref AllowHTTPFrom, !Ref AllowIPFrom]
+        FromPort: 443
+        IpProtocol: tcp
+        ToPort: 443
+      Tags:
+      - Key: Name
+        Value: !Sub ${AWS::StackName}-elb-sg
+      - Key: resource
+        Value: !Sub ${AWS::StackName}-elb-sg
+      - Key: environment
+        Value: !Ref TagEnvironment
+      - Key: owner
+        Value: !Ref TagOwner
+      - Key: client
+        Value: !Ref TagClient
+      - Key: project
+        Value: !Ref TagProject
+      - Key: jobcode
+        Value: !Ref TagJobcode
+
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+      - !Ref InstanceRole
+
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+
+  RolePolicies:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Action:
+          - s3:ListBucket
+          - s3:GetObject
+          - s3:PutBucketPolicy
+          - logs:CreateLogGroup
+          - logs:CreateLogStream
+          - logs:PutLogEvents
+          - logs:DescribeLogStreams
+          Effect: Allow
+          Resource:
+          - !Sub arn:aws:s3:::${S3BucketName}
+          - !Sub arn:aws:s3:::${S3BucketName}/*
+          - arn:aws:logs:*:*:*
+        - Action:
+          - cloudformation:DescribeStackResource
+          - ec2:AssociateAddress
+          - ec2:DescribeInstances
+          Effect: Allow
+          Resource: "*"
+      PolicyName: S3GetAccess
+      Roles:
+      - !Ref InstanceRole

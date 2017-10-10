@@ -1,0 +1,56 @@
+# my global config
+global:
+  scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+  # scrape_timeout is set to the global default (10s).
+
+  # Attach these labels to any time series or alerts when communicating with
+  # external systems (federation, remote storage, Alertmanager).
+  external_labels:
+      monitor: 'codelab-monitor'
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  # - "first.rules"
+  # - "second.rules"
+
+# A scrape configuration containing exactly one endpoint to scrape:
+# Here it's Prometheus itself.
+scrape_configs:
+  - job_name: 'proj-us-east-1'
+    ec2_sd_configs:
+      - region: us-east-1
+        profile: prometheus
+        refresh_interval: 60s
+        port: 8080
+    relabel_configs:
+      - source_labels: [__meta_ec2_tag_Name]
+        regex: proj-prd-asg
+        action: keep
+      - source_labels: [__meta_ec2_vpc_id]
+        regex: vpc-xxx
+        action: keep
+      - source_labels: [__meta_ec2_tag_Name]
+        target_label: name
+      - source_labels: [__meta_ec2_tag_environment]
+        target_label: env
+      - source_labels: [__meta_ec2_tag_project]
+        target_label: project
+  - job_name: 'proj-ap-southeast-1'
+    ec2_sd_configs:
+      - region: ap-southeast-1
+        profile: prometheus
+        refresh_interval: 60s
+        port: 8080
+    relabel_configs:
+      - source_labels: [__meta_ec2_tag_Name]
+        target_label: name
+        regex: proj-prd-asg
+        action: keep
+      - source_labels: [__meta_ec2_tag_environment]
+        target_label: env
+      - source_labels: [__meta_ec2_tag_project]
+        target_label: project
+      - source_labels: [__meta_ec2_vpc_id]
+        regex: vpc-xxx
+        action: keep

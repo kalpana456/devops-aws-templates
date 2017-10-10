@@ -1,0 +1,58 @@
+[
+    {
+        "ParameterValue": "name@email.com",
+        "ParameterKey": "OperatorEmail"
+    },
+    {
+        "ParameterValue": "x.x.x.x/32",
+        "ParameterKey": "SSHLocation"
+    },
+    {
+        "ParameterValue": "name-env",
+        "ParameterKey": "TagName"
+    },
+    {
+        "ParameterValue": "client",
+        "ParameterKey": "TagClient"
+    },
+    {
+        "ParameterValue": "vpc-id",
+        "ParameterKey": "VPCID"
+    },
+    {
+        "ParameterValue": "8",
+        "ParameterKey": "StorageSize"
+    },
+    {
+        "ParameterValue": "env",
+        "ParameterKey": "TagEnvironment"
+    },
+    {
+        "ParameterValue": "name@email.com",
+        "ParameterKey": "TagOwner"
+    },
+    {
+        "ParameterValue": "subnet-id",
+        "ParameterKey": "SubnetPublic1"
+    },
+    {
+        "ParameterValue": "subnet-id",
+        "ParameterKey": "SubnetPublic2"
+    },
+    {
+        "ParameterValue": "",
+        "ParameterKey": "UserDataScript"
+    },
+    {
+        "ParameterValue": "key-pair",
+        "ParameterKey": "KeyName"
+    },
+    {
+        "ParameterValue": "project",
+        "ParameterKey": "TagProject"
+    },
+    {
+        "ParameterValue": "t2.small",
+        "ParameterKey": "InstanceType"
+    }
+]

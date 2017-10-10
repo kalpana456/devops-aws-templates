@@ -1,0 +1,42 @@
+[
+    {
+        "ParameterValue": "128",
+        "ParameterKey": "MemorySize"
+    },
+    {
+        "ParameterValue": "nodejs4.3",
+        "ParameterKey": "Runtime"
+    },
+    {
+        "ParameterValue": "name-env",
+        "ParameterKey": "TagName"
+    },
+    {
+        "ParameterValue": "client-name",
+        "ParameterKey": "TagClient"
+    },
+    {
+        "ParameterValue": "project-name",
+        "ParameterKey": "TagProject"
+    },
+    {
+        "ParameterValue": "60",
+        "ParameterKey": "Timeout"
+    },
+    {
+        "ParameterValue": "env",
+        "ParameterKey": "TagEnvironment"
+    },
+    {
+        "ParameterValue": "name@email.com",
+        "ParameterKey": "TagOwner"
+    },
+    {
+        "ParameterValue": "bucket-name",
+        "ParameterKey": "S3BucketName"
+    },
+    {
+        "ParameterValue": "bucket/key/file.zip",
+        "ParameterKey": "S3BucketKey"
+    }
+]

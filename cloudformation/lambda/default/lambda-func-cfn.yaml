@@ -1,0 +1,174 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS CloudFormation Simple Lambda Function Template
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Lambda Function Details
+      Parameters:
+      - Runtime
+      - MemorySize
+      - Timeout
+    - Label:
+        default: Source Bucket Details
+      Parameters:
+      - S3BucketName
+      - S3BucketKey
+    - Label:
+        default: Tags
+      Parameters:
+      - TagName
+      - TagOwner
+      - TagClient
+      - TagProject
+      - TagEnvironment
+
+Parameters:
+  Runtime:
+    AllowedValues:
+    - nodejs4.3
+    - nodejs4.3-edge
+    - java8
+    - python2.7
+    - dotnetcore1.0
+    Description: The runtime environment for the Lambda function you are uploading.
+    Type: String
+    Type: String
+    Default: nodejs4.3
+  MemorySize:
+    Description: The amount of memory, in MB, your Lambda function is given.
+    AllowedValues:
+    - 128
+    - 192
+    - 256
+    - 320
+    - 384
+    - 448
+    - 512
+    - 576
+    - 640
+    - 704
+    - 768
+    - 832
+    - 896
+    - 960
+    - 1024
+    - 1088
+    - 1152
+    - 1216
+    - 1280
+    - 1344
+    - 1408
+    - 1472
+    - 1536
+    Default: 128
+    Type: Number
+  Timeout:
+    Description: The function execution time at which Lambda should terminate the function.
+    MaxValue: 300
+    MinValue: 1
+    Default: 60
+    Type: Number
+  S3BucketName:
+    ConstraintDescription: Must be a valid S3 bucket name.
+    # Default: bucket-name
+    Description: The name of the S3 bucket you want to protect - the existing
+      bucket policy will be over-written. Should not have any slashes (/).
+    Type: String
+  S3BucketKey:
+    ConstraintDescription: Should include path and full file name with .zip extension
+    # Default: bucket-key
+    Description: The path to the source ZIP file within the bucket. should not start with a / and should end with .zip (ex. bucket/key/file.zip)
+    Type: String
+  TagClient:
+    # Default: client-name
+    Description: Tag used for tracking purposes.
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  TagEnvironment:
+    AllowedValues:
+    - dev
+    - qa
+    - stg
+    - prod
+    - test
+    Default: dev
+    Description: Tag used for tracking purposes.
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  TagName:
+    # Default: tag-name
+    Description: Tag used for tracking purposes.
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  TagOwner:
+    # Default: name@host.com
+    Description: Tag used for tracking purposes.
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+  TagProject:
+    # Default: tag-project
+    Description: Tag used for tracking purposes.
+    MaxLength: 127
+    MinLength: 1
+    Type: String
+
+Resources:
+  LambdaExecutionPolicy:
+    DependsOn:
+    - LambdaExecutionRole
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Action:
+          - logs:*
+          - s3:ListBucket
+          - s3:GetObject
+          Effect: Allow
+          Resource:
+          - arn:aws:logs:*:*:*
+          - !Sub arn:aws:s3:::${S3BucketName}/${S3BucketKey}
+        - Action:
+          - ec2:Describe*
+          Effect: Allow
+          Resource: 
+          - '*'
+        Version: 2012-10-17
+      PolicyName: MyLambdaRolePolicy
+      Roles:
+      - Ref: LambdaExecutionRole
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+        Version: 2012-10-17
+      Path: /
+
+  LambdaFunction:
+    DependsOn:
+    - LambdaExecutionRole
+    - LambdaExecutionPolicy
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref S3BucketName
+        S3Key: !Ref S3BucketKey
+      Handler: index.handler
+      MemorySize: !Ref MemorySize
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: !Ref Runtime
+      Timeout: !Ref Timeout
